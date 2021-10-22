@@ -9,10 +9,12 @@ import os, sys
 import datetime
 import pathlib
 import math
+import struct
 
 IP_ADDRESS = '192.168.215.247'
 PORT = 49153
-TIMEOUT = 100
+#TIMEOUT = 100
+TIMEOUT = 10
 
 class DATA:
     def __init__(self, powDBm, freq_start, freq_span, MesTimePoint):
@@ -56,24 +58,32 @@ class MS2840A:
         word += '\r\n'
         self._soc.send(word.encode())
 
-    def _r(self):
-        ret_msg = ''
+    def _r(self, decode=True):
+        if decode:
+            ret_msg = ''
+            end     = '\n'
+        else :
+            ret_msg = b''
+            end     = b'\n'[0]
+            pass
         self._soc.settimeout(self.timeout)
         while True:
             try:
-                rcvmsg = self._soc.recv(1024).decode()
+                rcvmsg = self._soc.recv(1024)
+                if decode: rcvmsg = rcvmsg.decode()
             except Exception as e:
                 print(f'MS2840A:_r(): Error! {e}')
                 print(f'MS2840A:_r(): Error! --> Close socket connection!')
                 return None
             ret_msg += rcvmsg
-            if rcvmsg[-1] == '\n':
+            #print(rcvmsg[-1],end,rcvmsg[-1] == end)
+            if rcvmsg[-1] == end:
                 break        
         return ret_msg.strip()
 
-    def _wr(self, word):
+    def _wr(self, word, decode=True):
         self._w(word)
-        r = self._r()
+        r = self._r(decode=decode)
         if r is None :
             print(f'MS2840A:_wr(): Error! Failed to read for the command: "{word}"')
             print(f'MS2840A:_wr(): Error!  --> Exit')
@@ -115,6 +125,8 @@ class MS2840A:
         self.freqsynt_mode = 'NORM'
         self.is_att_auto = True
         self.is_continu = False
+        self.data_format = 'REAL'
+        self.binary_order = 'NORM'
         self.print_error()
         self._wait()
 
@@ -130,27 +142,44 @@ class MS2840A:
             self._soc.close()
             self._connected = False
 
+    def decode_data(self, rawbin, verbose=0):
+        nchar = (int)(rawbin[1:2].decode())
+        if verbose>1: print(f'MS2840A:decode_data(): nchar = {nchar}')
+        nbinary = (int)((int)(rawbin[2:2+nchar].decode())/4)
+        unpack_format = '>'+'f'*nbinary
+        if verbose>1: 
+            print(f'MS2840A:decode_data(): nbinary = {nbinary}')
+            print(f'MS2840A:decode_data(): binary data length = {len(rawbin[2+nchar:])}')
+            print(f'MS2840A:decode_data(): unpack format = {unpack_format}')
+            pass
+        data = struct.unpack(unpack_format, rawbin[2+nchar:])
+        return data
+
+
     def read_data(self, verbose=0):
         ut = time.time()
         # measure data
         self._single()
+        data = []
         if self._fftmode : 
             npoints = self.trace_points
             nread = math.ceil(npoints/5121.)
-            rawstr_array = []
-            #print(f'npoints={npoints}')
+            if verbose>0: print(f'npoints={npoints}')
             for i in range(nread):
                 start   = 5121*i
                 nremain = npoints - start
                 length  = 5121 if nremain>=5121 else nremain
-                _rawstr = self._wr(f'TRAC:DATA? {start},{length}')
-                rawstr_array.append(_rawstr)
+                _rawbin = self._wr(f'TRAC:DATA? {start},{length}', decode=False)
+                _rawdata = self.decode_data(_rawbin, verbose)
+                data +=_rawdata
                 pass
-            rawstr = ','.join(rawstr_array)
-        else       : rawstr = self._wr('TRAC:DATA? TRAC1')
-        if rawstr is None:
+        else       : 
+            _rawbin = self._wr('TRAC:DATA? TRAC1', decode=False)
+            data    = self.decode_data(_rawbin, verbose)
+            pass
+        if data is None:
             return None
-        data = np.array([float(ns) for ns in rawstr.split(',')])
+        data = np.array(data)
         if verbose>0:
             print(f'frequency step  = {self.freq_step*1e-3} kHz')
             print(f'RBW  = {self.band_wid*1e-3} kHz')
@@ -577,8 +606,11 @@ class MS2840A:
         return int(self._wr('AVER:COUN?'))
     @trace_nave.setter
     def trace_nave(self, nave:int ):
-        self.trace_storemode = 'LAV' # Trace store mode is chaned to 'average' mode.
-        self._w(f'AVER:COUN {nave}')
+        if nave==1:
+            self.trace_storemode = 'OFF'
+        else :
+            self.trace_storemode = 'LAV' # Trace store mode is chaned to 'average' mode.
+            self._w(f'AVER:COUN {nave}')
 
     ## Detection mode
     @property
@@ -627,13 +659,31 @@ class MS2840A:
         return str(self._wr('SWE:RUL?'))
     @sweep_type.setter
     def sweep_type(self, stype):
-        self._w(f'SWE:RUL {stype}')
         if stype in ['DRAN', 'SPE', 'OSW', 'PSW', 'PFFT', 'DRANge', 'SPEed', 'OSWeep', 'PSWeep']:
             self._w(f'SWE:RUL {stype}')
         else :
             print(f'MS2840A:sweep_type(): Error! There is no sweep type of "{stype}"!')
 
+    # Data format
+    @property
+    def data_format(self) :
+        return str(self._wr('FORM?'))
+    @data_format.setter
+    def data_format(self, form):
+        if form in ['REAL', 'ASC', 'ASCii']:
+            self._w(f'FORM {form}')
+        else :
+            print(f'MS2840A:data_format(): Error! There is no data format of "{form}"!')
 
+    @property
+    def binary_order(self) :
+        return str(self._wr('FORM:BORD?'))
+    @binary_order.setter
+    def binary_order(self, order): # NORM: big endian / SWAP: little endian
+        if order in ['NORM', 'NORMal', 'SWAP', 'SWAPped']:
+            self._w(f'FORM:BORD {order}')
+        else :
+            print(f'MS2840A:binary_order(): Error! There is no binary order type of "{order}"!')
 
 
 def main(mode='FFT', 
@@ -664,7 +714,7 @@ def main(mode='FFT',
         print(f'Elapsed time for fft_setting() = {setting_time} sec')
         # run fft measurement
         start_time = time.time()
-        result = ms.fft_run(verbose=0)
+        result = ms.fft_run(verbose=2)
         if result is None :
             print(f'FFT is failed! The return of fft_run is {result}.')
             return 0
@@ -775,6 +825,8 @@ def main(mode='FFT',
     f.write(f'trace-points, {ms.trace_points}, points\n')
     f.write(f'trace-mode, {ms.trace_storemode}, \n')
     f.write(f'det-mode, {ms.det_mode}, \n')
+    f.write(f'is-att-auto, {ms.is_att_auto}, \n')
+    f.write(f'attenuator, {ms.att}, dB\n')
     f.write(f'# FFT setting\n')
     f.write(f'sampling-rate, {ms.freq_samp}, Hz\n')
     f.write(f'capture-time, {ms.capt_time}, sec\n')
@@ -821,7 +873,7 @@ if __name__ == '__main__':
     freq_span  = 1.e+2 #kHz
     rbw        = 1 #kHz
     meas_time  = 1 # sec only for FFT
-    nave       = 10 # times
+    nave       = 1 # times
     #'''
 
 
