@@ -1,20 +1,24 @@
 #!/usr/bin/env python
-import socket
-import numpy as np
-from time import sleep
-import time
-import matplotlib.pyplot as plt
-plt.ioff()
 import os, sys
+import argparse
 import datetime
 import pathlib
 import math
 import struct
+import time
+
+import socket
+import numpy as np
+import matplotlib.pyplot as plt
+plt.ioff()
 
 IP_ADDRESS = '192.168.215.247'
 PORT = 49153
-#TIMEOUT = 100
-TIMEOUT = 10
+TIMEOUT = 100
+
+g_colors = ['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
+        'tab:brown','tab:pink','tab:olive','tab:cyan','tab:gray','red',
+        'royalblue','turquoise','darkolivegreen','magenta','blue','green']*5
 
 class DATA:
     def __init__(self, powDBm, freq_start, freq_span, MesTimePoint):
@@ -28,11 +32,15 @@ class DATA:
 
     @property
     def amp(self):
-        return np.power(10, self._powDBm/10)/1000
+        return np.power(10., self._powDBm*0.1)*1.e-3
 
     @property
     def freq(self):
         return self._freq
+
+    @property
+    def dfreq(self):
+        return np.diff(self._freq)
 
     @property
     def time(self):
@@ -207,12 +215,12 @@ class MS2840A:
         print(f'analysis time  = {self.ana_time} sec')
         print(f'sampling rate  = {self.freq_samp*1e-3} kHz')
         print(f'trace points   = {self.trace_points} points')
-        print(f'# of storage data = {self.trace_nave} times (averaging {self.trace_nave} times)')
+        print(f'# of storage data = {self.trace_nAve} times (averaging {self.trace_nAve} times)')
         print(f'detection mode = {self.det_mode}')
         self.print_error()
         print()
 
-    def fft_setting(self, freq_start, freq_span, rbw, time, step=None, nave=1, verbose=0):
+    def fft_setting(self, freq_start, freq_span, rbw, time, step=None, nAve=1, verbose=0):
         self._fftmode = True
         self._w('INST SIGANA')
         if verbose>0 :
@@ -240,7 +248,7 @@ class MS2840A:
         self.band_wid   = rbw # [kHz]
         if step is not None: self.freq_step = step # [kHz]
         self.freq_start = freq_start # [GHz]
-        self.trace_nave = nave
+        self.trace_nAve = nAve
 
         if verbose>0 : self.print_fft_setting()
         self._wait()
@@ -255,8 +263,8 @@ class MS2840A:
         data = self.read_data(verbose=verbose)
         return data
 
-    def fft(self, freq_start, freq_span, rbw, time, step=None, nave=1, verbose=0):
-        self.fft_setting(freq_start=freq_start, freq_span=freq_span, rbw=rbw, time=time, step=step, nave=nave, verbose=verbose)
+    def fft(self, freq_start, freq_span, rbw, time, step=None, nAve=1, verbose=0):
+        self.fft_setting(freq_start=freq_start, freq_span=freq_span, rbw=rbw, time=time, step=step, nAve=nAve, verbose=verbose)
         data = self.fft_run(verbose=0)
         return data
 
@@ -274,12 +282,12 @@ class MS2840A:
         print(f'sweep time  = {self.sweep_time} sec')
         print(f'sweep type  = {self.sweep_type}')
         print(f'trace points   = {self.trace_points} points')
-        print(f'# of storage data = {self.trace_nave} times (averaging {self.trace_nave} times)')
+        print(f'# of storage data = {self.trace_nAve} times (averaging {self.trace_nAve} times)')
         print(f'detection mode = {self.det_mode}')
         self.print_error()
         print()
 
-    def sweep_setting(self, freq_start, freq_stop, rbw, time=None, step=None, nave=1, verbose=0):
+    def sweep_setting(self, freq_start, freq_stop, rbw, time=None, step=None, nAve=1, verbose=0):
         self._fftmode = False
         self._w('INST SPECT')
         if verbose>0 :
@@ -312,7 +320,7 @@ class MS2840A:
         self.freq_stop  = freq_stop # [GHz]
         self.det_mode = 'RMS' # NORM, POS, NEG, SAMP, RMS
         self.trace_points = (int)((self.freq_stop-self.freq_start)/self.band_wid) + 1
-        self.trace_nave = nave
+        self.trace_nAve = nAve
         self._wait()
 
         if verbose>0 : self.print_sweep_setting()
@@ -326,8 +334,8 @@ class MS2840A:
         data = self.read_data(verbose=verbose)
         return data
 
-    def sweep(self, freq_start, freq_stop, rbw, time=None, step=None, nave=1, verbose=0):
-        self.sweep_setting(freq_start=freq_start, freq_span=freq_stop, rbw=rbw, time=time, step=step, nave=nave, verbose=verbose)
+    def sweep(self, freq_start, freq_stop, rbw, time=None, step=None, nAve=1, verbose=0):
+        self.sweep_setting(freq_start=freq_start, freq_span=freq_stop, rbw=rbw, time=time, step=step, nAve=nAve, verbose=verbose)
         data = self.sweep_run(verbose=0)
         return data
 
@@ -602,15 +610,15 @@ class MS2840A:
             print(f'MS2840A:trace_storemode(): Error! There is no trace mode of "{mode}"!')
             pass
     @property
-    def trace_nave(self) -> int:
+    def trace_nAve(self) -> int:
         return int(self._wr('AVER:COUN?'))
-    @trace_nave.setter
-    def trace_nave(self, nave:int ):
-        if nave==1:
+    @trace_nAve.setter
+    def trace_nAve(self, nAve:int ):
+        if nAve==1:
             self.trace_storemode = 'OFF'
         else :
             self.trace_storemode = 'LAV' # Trace store mode is chaned to 'average' mode.
-            self._w(f'AVER:COUN {nave}')
+            self._w(f'AVER:COUN {nAve}')
 
     ## Detection mode
     @property
@@ -691,8 +699,9 @@ def main(mode='FFT',
         freq_span  = 2.5e+3, #kHz
         rbw        = 0.3, #kHz
         meas_time  = None, # sec
-        nave       = 10, # times
-        outdir='~/data/ms2840a', filename_add_suffix=True):
+        nAve       = 10, # times (number of average for each data)
+        nRun       = 10, # times (number of run or saved data)
+        outdir='~/data/ms2840a', filename=None, filename_add_suffix=True):
 
     # Initialize connection
     ms = MS2840A()
@@ -702,22 +711,27 @@ def main(mode='FFT',
     setting_time = 0
     run_time     = 0
 
+    results = []
     if mode=='FFT' : # FFT mode by using Signal Analyzer
 
         # parameter setting
-        step = rbw # kHz
+        step = 1. # kHz
         # fft setting
         start_time = time.time()
-        result = ms.fft_setting(freq_start=freq_start, freq_span=freq_span, rbw=rbw, time=meas_time, step=step, nave=nave, verbose=1)
+        ms.fft_setting(freq_start=freq_start, freq_span=freq_span, rbw=rbw, time=meas_time, step=step, nAve=nAve, verbose=1)
         stop_time = time.time()
         setting_time = stop_time-start_time
         print(f'Elapsed time for fft_setting() = {setting_time} sec')
         # run fft measurement
         start_time = time.time()
-        result = ms.fft_run(verbose=2)
-        if result is None :
-            print(f'FFT is failed! The return of fft_run is {result}.')
-            return 0
+        for i in range(nRun):
+            print(f'i={i+1}/{nRun} fft_run()')
+            result = ms.fft_run(verbose=0)
+            if result is None :
+                print(f'FFT is failed! The return of fft_run is {result}.')
+                return 0
+            results.append(result)
+            pass
         stop_time = time.time()
         run_time  = stop_time - start_time
         print(f'Elapsed time for fft_run() = {run_time} sec')
@@ -726,19 +740,23 @@ def main(mode='FFT',
 
         # parameter setting
         freq_stop = freq_start + freq_span*1e-6 # GHz
-        step      = None # kHz
+        step      = 1. # kHz
         # fft setting
         start_time = time.time()
-        result = ms.sweep_setting(freq_start=freq_start, freq_stop=freq_stop, rbw=rbw, time=meas_time, step=step, nave=nave, verbose=1)
+        ms.sweep_setting(freq_start=freq_start, freq_stop=freq_stop, rbw=rbw, time=meas_time, step=step, nAve=nAve, verbose=1)
         stop_time = time.time()
         setting_time  = stop_time - start_time
         print(f'Elapsed time for sweep_setting() = {setting_time} sec')
         # run fft measurement
         start_time = time.time()
-        result = ms.sweep_run(verbose=0)
-        if result is None :
-            print(f'SWEEP is failed! The return of sweep_run is {result}.')
-            return 0
+        for i in range(nRun):
+            print(f'i={i+1}/{nRun} sweep_run()')
+            result = ms.sweep_run(verbose=0)
+            if result is None :
+                print(f'SWEEP is failed! The return of sweep_run is {result}.')
+                return 0
+            results.append(result)
+            pass
         stop_time = time.time()
         run_time  = stop_time - start_time
         print(f'Elapsed time for sweep_run() = {run_time} sec')
@@ -749,12 +767,20 @@ def main(mode='FFT',
         return -1
         pass
 
+    nResult = len(results)
 
-    fig, ax = plt.subplots()
-    ax.plot(result.freq*1e-9, result.powDBm)
-    ax.set_xlabel('Freq [GHz]')
-    ax.set_ylabel('dBm')
-    ax.grid()
+    fig, ax = plt.subplots(2,1)
+    fig.set_size_inches(6,8)
+    for i in range(nResult):
+        ax[0].plot(results[i].freq*1e-9, results[i].powDBm, color=g_colors[i], linewidth=1)
+        ax[1].plot(results[i].freq*1e-9, results[i].amp   , color=g_colors[i], linewidth=1)
+        pass
+    ax[0].set_xlabel('Frequency [GHz]')
+    ax[0].set_ylabel('Power [dBm]')
+    ax[0].grid()
+    ax[1].set_xlabel('Frequency [GHz]')
+    ax[1].set_ylabel('Power [W]')
+    ax[1].grid()
     fig.tight_layout()
 
     # make output folder                                                     
@@ -772,7 +798,7 @@ def main(mode='FFT',
         pass
 
     # make new file                                                           
-    filename = input("filename ? : ")
+    if filename is None or filename=='': filename = input("filename ? : ")
     if filename=='':
         print(f'Do NOT save the data!')
         ms.close()
@@ -780,14 +806,15 @@ def main(mode='FFT',
         print('End')
         return 0
     if filename_add_suffix :
-        filename += f'_{freq_span*1e-3:.1f}MHz_RBW{rbw:.1f}kHz_{nave}times_{meas_time}sec'
+        filename += f'_{freq_span*1e-3:.1f}MHz_RBW{rbw:.1f}kHz_{nAve}times_{meas_time}sec'
         pass
-    fdatapath = f'{todaydir}/data/{filename}.dat'
-    if os.path.exists(fdatapath):
+    fdatapaths = np.array([ f'{todaydir}/data/{filename}_{i}.dat' for i in range(nResult) ] if nResult>1 else [f'{todaydir}/data/{filename}.dat'])
+    isexists   = np.array([ os.path.exists(path) for path in fdatapaths ])
+    if np.any(isexists) :
         _filename = input("other : ")
-        if _filename == filename: print(f'Warning! The output file ({filename}.dat) is overwriten!')
+        if _filename == filename: print(f'Warning! The output file ({fdatapaths[isexists]}) is overwriten!')
         filename = _filename
-        fdatapath = f'{todaydir}/data/{filename}.dat'
+        fdatapaths = np.array([ f'{todaydir}/data/{filename}_{i}.dat' for i in range(nResult) ] if nResult>1 else [f'{todaydir}/data/{filename}.dat'])
         pass
     fconfigpath = f'{todaydir}/data/{filename}.csv'
     ffigpath = f'{todaydir}/figure/{filename}.pdf'
@@ -798,15 +825,19 @@ def main(mode='FFT',
     fig.savefig(ffigpath)
 
     # write data
-    print(f'Save data to {fdatapath}')
-    f = open(fdatapath, "w")
-    f.write("#RBW = " + str(ms.band_wid) + " [Hz]" + "\n")
-    f.write("#count = " + str(ms.trace_nave) + "\n")
-    f.write("#Frequency[Hz] Power[dBm]" + "\n")
-    for i in range(len(result.freq)):
-        f.write(str(result.freq[i]) + " " + str(result.powDBm[i]) + "\n")
+    print(f'Save data to {fdatapaths}')
+    band_wid = ms.band_wid
+    trace_nAve = ms.trace_nAve
+    for result, fdatapath in zip(results, fdatapaths) :
+        f = open(fdatapath, "w")
+        f.write("#RBW = " + str(band_wid) + " [Hz]" + "\n")
+        f.write("#count = " + str(trace_nAve) + "\n")
+        f.write("#Frequency[Hz] Power[dBm]" + "\n")
+        for i in range(len(result.freq)):
+            f.write(str(result.freq[i]) + " " + str(result.powDBm[i]) + "\n")
+            pass
+        f.close()
         pass
-    f.close()
 
     # write config
     print(f'Save data to {fconfigpath}')
@@ -814,14 +845,20 @@ def main(mode='FFT',
     fftmode = ms._fftmode
     f = open(fconfigpath, "w")
     f.write(f'filename, {filename}, \n')
+    for i, path in enumerate(fdatapaths):
+        f.write(f'filepath{i}, {path}, \n')
+        pass
+    dfreq = np.mean(results[0].dfreq)
     f.write(f'start-time, {time_str}, \n')
     f.write(f'mode, {"FFT" if fftmode else "SWEEP"},\n')
-    f.write(f'freq-start, {ms.freq_start}, Hz\n')
-    f.write(f'freq-stop, {ms.freq_stop}, Hz\n')
-    f.write(f'freq-span, {ms.freq_span}, Hz\n')
-    f.write(f'freq-step, {ms.freq_step}, Hz\n')
-    f.write(f'RBW, {ms.band_wid}, Hz\n')
-    f.write(f'count, {ms.trace_nave}, counts\n')
+    f.write(f'freq-start, {ms.freq_start:e}, Hz\n')
+    f.write(f'freq-stop, {ms.freq_stop:e}, Hz\n')
+    f.write(f'freq-span, {ms.freq_span:e}, Hz\n')
+    f.write(f'freq-step, {ms.freq_step:e}, Hz\n')
+    f.write(f'dfreq, {dfreq:e}, Hz\n')
+    f.write(f'RBW, {ms.band_wid:e}, Hz\n')
+    f.write(f'count, {ms.trace_nAve}, counts\n')
+    f.write(f'nRun, {nResult}, times\n')
     f.write(f'trace-points, {ms.trace_points}, points\n')
     f.write(f'trace-mode, {ms.trace_storemode}, \n')
     f.write(f'det-mode, {ms.det_mode}, \n')
@@ -842,10 +879,39 @@ def main(mode='FFT',
     f.write(f'time-setting, {setting_time}, sec\n')
     f.write(f'time-run, {run_time}, sec\n')
     f.write(f'time/MHz, {run_time/(ms.freq_span*1.e-6)}, sec/MHz\n')
-    dutyratio = (ms.ana_time*(float)(ms.trace_nave))/run_time if fftmode else (ms.sweep_time*(float)(ms.trace_nave))/run_time;
+    eff_time = ms.ana_time*(float)(ms.trace_nAve*nResult) if fftmode else ms.sweep_time*(float)(ms.trace_nAve*nResult)
+    dutyratio = eff_time/run_time;
     f.write(f'duty-ratio, {dutyratio}, \n')
     f.write(f'duty-ratio*span, {dutyratio*(ms.freq_span*2.e-6)}, MHz\n')
     f.write(f'span/duty-ratio, {(ms.freq_span*1.e-6)/dutyratio}, MHz\n')
+
+    # Calculate data statistics
+    mins  = [ np.min(result.amp) for result in results ] # [W]
+    maxs  = [ np.max(result.amp) for result in results ] # [W]
+    means = [ np.mean(result.amp) for result in results ] # [W]
+    stds  = [ np.std(result.amp) for result in results ] # [W]
+    neps  = np.multiply(stds, np.sqrt(eff_time)) # [W*sqrt(sec)]
+    nPoints100kHz = (int)(1.e+5/dfreq)
+    stdsEvery100kHz = [ np.std(result.amp[::nPoints100kHz]) for result in results ] # [W]
+    nepsEvery100kHz  = np.multiply(stds, np.sqrt(eff_time)) # [W*sqrt(sec)]
+    f.write(f'# Data statistics\n')
+    f.write(f'mean, {np.mean(means):e}, W\n')
+    f.write(f'std, {np.mean(stds):e}, W\n')
+    f.write(f'std-100kHz, {np.mean(stdsEvery100kHz):e}, W\n')
+    f.write(f'nep, {np.mean(neps):e}, W/sqrt(Hz)\n')
+    f.write(f'nep-100kHz, {np.mean(nepsEvery100kHz):e}, W/sqrt(Hz)\n')
+    f.write(f'min, {np.mean(mins):e}, W\n')
+    f.write(f'max, {np.mean(maxs):e}, W\n')
+    for i in range(nResult):
+        f.write(f'mean{i}, {means[i]:e}, W\n')
+        f.write(f'std{i}, {stds[i]:e}, W\n')
+        f.write(f'std-100kHz{i}, {stdsEvery100kHz[i]:e}, W\n')
+        f.write(f'nep{i}, {neps[i]:e}, W/sqrt(Hz)\n')
+        f.write(f'nep-100kHz{i}, {nepsEvery100kHz[i]:e}, W/sqrt(Hz)\n')
+        f.write(f'min{i}, {mins[i]:e}, W\n')
+        f.write(f'max{i}, {maxs[i]:e}, W\n')
+        pass
+
     
     ms.close()
     print('End')
@@ -853,36 +919,41 @@ def main(mode='FFT',
 
 if __name__ == '__main__':
 
-    outdir='~/data/ms2840a'
+    # Default settings
+    outdir     = '~/data/ms2840a'
+    filename   = None
     filename_add_suffix = False
-
-    # SWEEP
-    '''
-    mode = 'SWEEP' # SWEEP or FFT
-    freq_start = 19.99995 #GHz
-    freq_span  = 1.e+2 #kHz
-    rbw        = 0.3 #kHz
-    meas_time  = None # sec only for FFT
-    nave       = 1 # times
-    #'''
-
-    # FFT
-    #'''
+    ## 
     mode = 'FFT' # SWEEP or FFT
     freq_start = 19.99995  #GHz
     freq_span  = 1.e+2 #kHz
     rbw        = 1 #kHz
-    meas_time  = 1 # sec only for FFT
-    nave       = 1 # times
-    #'''
+    meas_time  = None # sec (FFT: measurement time / SWEE: sweep time)
+    nAve       = 1 # times (averaging number of measurements = counts)
+    nRun       = 1 # times (number of run to be recorded separately)
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-m', '--mode', dest='mode', type=str, default=mode, help=f'FFT mode or SWEEP mode (default: {mode})')
+    parser.add_argument('-s', '--fstart', dest='freq_start', type=float, default=freq_start, help=f'Start Frequency [GHz] (default: {freq_start})')
+    parser.add_argument('-w', '--fspan', dest='freq_span', type=float, default=freq_span, help=f'Frequency Span [kHz] (default: {freq_span})')
+    parser.add_argument('-r', '--rbw', dest='rbw', type=float, default=rbw, help=f'Resolution Band-Width (RBW) [kHz] (default: {rbw})')
+    parser.add_argument('-t', '--time', dest='meas_time', type=float, default=meas_time, help=f'Measurement/Sweep time for one count for FFT/SWEEP mode [sec] (default: {meas_time})')
+    parser.add_argument('-n', '--nAve', dest='nAve', default=nAve, type=int, help=f'Number of measurement counts which will be averaged (default: {nAve} times)')
+    parser.add_argument('-l', '--nRun', dest='nRun', default=nRun, type=int, help=f'Number of runs to be recorded separately (default: {nRun} times)')
+    parser.add_argument('-o', '--outdir', default=outdir, help=f'Output directory name (default: {outdir})')
+    parser.add_argument('-f', '--filename', default=filename, help=f'Output filename. If it is None, filename will be asked after measurements. (default: {filename})')
+    parser.add_argument('--filename_add_suffix', default=filename_add_suffix, help=f'Add suffix on output filename (default: {filename_add_suffix})')
+    args = parser.parse_args()
 
-    ret = main(mode=mode, 
-        freq_start = freq_start,
-        freq_span  = freq_span,
-        rbw        = rbw,
-        meas_time  = meas_time,
-        nave       = nave,
-        outdir     = outdir, 
-        filename_add_suffix=filename_add_suffix)
+    ret = main(
+        mode       = args.mode, 
+        freq_start = args.freq_start,
+        freq_span  = args.freq_span,
+        rbw        = args.rbw,
+        meas_time  = args.meas_time,
+        nAve       = args.nAve,
+        nRun       = args.nRun,
+        outdir     = args.outdir, 
+        filename   = args.filename,
+        filename_add_suffix = args.filename_add_suffix)
 
