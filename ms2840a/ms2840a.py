@@ -701,7 +701,7 @@ def main(mode='FFT',
         meas_time  = None, # sec
         nAve       = 10, # times (number of average for each data)
         nRun       = 10, # times (number of run or saved data)
-        outdir='~/data/ms2840a', filename=None, filename_add_suffix=True):
+        outdir='~/data/ms2840a', noplot=False, filename=None, filename_add_suffix=True):
 
     # Initialize connection
     ms = MS2840A()
@@ -769,19 +769,21 @@ def main(mode='FFT',
 
     nResult = len(results)
 
-    fig, ax = plt.subplots(2,1)
-    fig.set_size_inches(6,8)
-    for i in range(nResult):
-        ax[0].plot(results[i].freq*1e-9, results[i].powDBm, color=g_colors[i], linewidth=1)
-        ax[1].plot(results[i].freq*1e-9, results[i].amp   , color=g_colors[i], linewidth=1)
+    if not noplot:
+        fig, ax = plt.subplots(2,1)
+        fig.set_size_inches(6,8)
+        for i in range(nResult):
+            ax[0].plot(results[i].freq*1e-9, results[i].powDBm, color=g_colors[i], linewidth=1)
+            ax[1].plot(results[i].freq*1e-9, results[i].amp   , color=g_colors[i], linewidth=1)
+            pass
+        ax[0].set_xlabel('Frequency [GHz]')
+        ax[0].set_ylabel('Power [dBm]')
+        ax[0].grid()
+        ax[1].set_xlabel('Frequency [GHz]')
+        ax[1].set_ylabel('Power [W]')
+        ax[1].grid()
+        fig.tight_layout()
         pass
-    ax[0].set_xlabel('Frequency [GHz]')
-    ax[0].set_ylabel('Power [dBm]')
-    ax[0].grid()
-    ax[1].set_xlabel('Frequency [GHz]')
-    ax[1].set_ylabel('Power [W]')
-    ax[1].grid()
-    fig.tight_layout()
 
     # make output folder                                                     
     outdir = pathlib.Path(outdir).expanduser() # convert '~/' directory to full path name
@@ -820,9 +822,11 @@ def main(mode='FFT',
     ffigpath = f'{todaydir}/figure/{filename}.pdf'
 
     # save figure
-    print(f'Save figure to {ffigpath}')
-    plt.close(fig)
-    fig.savefig(ffigpath)
+    if not noplot:
+        print(f'Save figure to {ffigpath}')
+        plt.close(fig)
+        fig.savefig(ffigpath)
+        pass
 
     # write data
     print(f'Save data to {fdatapaths}')
@@ -941,6 +945,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--nAve', dest='nAve', default=nAve, type=int, help=f'Number of measurement counts which will be averaged (default: {nAve} times)')
     parser.add_argument('-l', '--nRun', dest='nRun', default=nRun, type=int, help=f'Number of runs to be recorded separately (default: {nRun} times)')
     parser.add_argument('-o', '--outdir', default=outdir, help=f'Output directory name (default: {outdir})')
+    parser.add_argument('--noplot', default=False, action='store_true', help=f'Not create plots (default: False)')
     parser.add_argument('-f', '--filename', default=filename, help=f'Output filename. If it is None, filename will be asked after measurements. (default: {filename})')
     parser.add_argument('--filename_add_suffix', default=filename_add_suffix, help=f'Add suffix on output filename (default: {filename_add_suffix})')
     args = parser.parse_args()
@@ -954,6 +959,7 @@ if __name__ == '__main__':
         nAve       = args.nAve,
         nRun       = args.nRun,
         outdir     = args.outdir, 
+        noplot     = args.noplot,
         filename   = args.filename,
         filename_add_suffix = args.filename_add_suffix)
 
