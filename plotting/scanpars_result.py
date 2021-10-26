@@ -52,8 +52,18 @@ def read_configs(scan_outdir):
 def create_plot_wt_selections(df, sel_values, sel_key, x_key, y_key, z_key, x_label='', y_label='', z_label=''):
     fig, axs = plt.subplots(3,3)
     fig.set_size_inches(12,12)
-    selections = [ df[sel_key]==v for v in sel_values]
+    selections = np.array([ df[sel_key]==v for v in sel_values])
+    print('selections',len(selections), len(selections[0]))
+    selection_any = np.any(selections, axis=0)
+    print('selection_any',len(selection_any))
     df_sels = [ df[sel] for sel in selections ]
+    df_any  = df[selection_any]
+    df_x = df_any[x_key]
+    df_y = df_any[y_key]
+    x_min = np.min(df_x) * 0.8
+    x_max = np.max(df_x) * 1.2
+    y_min = np.min(df_y) * 0.8
+    y_max = np.max(df_y) * 1.2
     for n, _df in enumerate(df_sels):
         #print(_df.keys())
         print(f'{z_label} ({sel_key}={sel_values[n]}):', _df[['RBW','freq-span','ana-time','count','nRun','filename']])
@@ -64,10 +74,13 @@ def create_plot_wt_selections(df, sel_values, sel_key, x_key, y_key, z_key, x_la
         for k, v in _df.iterrows():
             ax.annotate(f'{v[z_key]:.1e}', xy=(v[x_key], v[y_key]), size=6)
             pass
-        fig.colorbar(sc, ax=ax)
+        cbar = fig.colorbar(sc, ax=ax)
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
         ax.set_title(f'{z_label} ({sel_key}={sel_values[n]})')
+        cbar.set_label(f'{z_label} ({sel_key}={sel_values[n]})', fontsize=12)
+        ax.set_xlim([x_min, x_max])
+        ax.set_ylim([y_min, y_max])
         ax.grid()
         pass;
     fig.tight_layout()
