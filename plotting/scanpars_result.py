@@ -53,12 +53,17 @@ def create_plot_wt_selections(df, sel_values, sel_key, x_key, y_key, z_key, x_la
     fig, axs = plt.subplots(3,3)
     fig.set_size_inches(12,12)
     selections = [ df[sel_key]==v for v in sel_values]
-    dfs = [ df[sel] for sel in selections ]
-    for n, df in enumerate(dfs):
+    df_sels = [ df[sel] for sel in selections ]
+    for n, _df in enumerate(df_sels):
+        #print(_df.keys())
+        print(f'{z_label} ({sel_key}={sel_values[n]}):', _df[['RBW','freq-span','ana-time','count','nRun','filename']])
         i = (int)(n/3.)
         j = n%3
         ax = axs[i][j]
-        sc = ax.scatter(df[x_key], df[y_key], c=df[z_key], s=20, cmap=plt.cm.jet)
+        sc = ax.scatter(_df[x_key], _df[y_key], c=_df[z_key], s=20, cmap=plt.cm.jet)
+        for k, v in _df.iterrows():
+            ax.annotate(f'{v[z_key]:.1e}', xy=(v[x_key], v[y_key]), size=6)
+            pass
         fig.colorbar(sc, ax=ax)
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
@@ -76,6 +81,7 @@ def plot_scanpars_result(configs, outdir, outname='aho'):
     df['freq-span'] *= 1.e-6 # MHz
     df['RBW'] *= 1.e-3 # kHz
     df['total-time'] = df['ana-time']*df['count']*df['nRun'] # sec
+    df['duty-ratio*span'] = df['duty-ratio'] * df['freq-span'] # MHz
     print(df)
     print(df.keys)
 
@@ -104,6 +110,11 @@ def plot_scanpars_result(configs, outdir, outname='aho'):
             x_label='Frequency Span [MHz]', y_label='RBW [kHz]', z_label='NEP [W/$\sqrt{Hz}$]')
     fig.savefig(f'{outdir}/{outname}_freqspan-rbw-net.pdf')
 
+    fig = create_plot_wt_selections(df, sel_values=[1.,2.,5.,10.,20.], sel_key='ana-time', 
+            x_key='freq-span', y_key='RBW', z_key='nep-100kHz', 
+            x_label='Frequency Span [MHz]', y_label='RBW [kHz]', z_label='NEP per 100kHz [W/$\sqrt{Hz}$]')
+    fig.savefig(f'{outdir}/{outname}_freqspan-rbw-net100kHz.pdf')
+
     fig = create_plot_wt_selections(df, sel_values=[0.1,0.3,0.5,1.], sel_key='RBW', 
             x_key='freq-span', y_key='ana-time', z_key='duty-ratio', 
             x_label='Frequency Span [MHz]', y_label='Measurement Time [sec]', z_label=r'Dutyratio')
@@ -119,14 +130,18 @@ def plot_scanpars_result(configs, outdir, outname='aho'):
             x_label='Frequency Span [MHz]', y_label='Measurement Time [sec]', z_label='NEP [W/$\sqrt{Hz}$]')
     fig.savefig(f'{outdir}/{outname}_freqspan-time-net.pdf')
 
+    fig = create_plot_wt_selections(df, sel_values=[0.1,0.3,0.5,1.], sel_key='RBW', 
+            x_key='freq-span', y_key='ana-time', z_key='nep-100kHz', 
+            x_label='Frequency Span [MHz]', y_label='Measurement Time [sec]', z_label='NEP per 100kHz [W/$\sqrt{Hz}$]')
+    fig.savefig(f'{outdir}/{outname}_freqspan-time-net100kHz.pdf')
+
 
 
     return 0
 
 
 if __name__=='__main__':
-    #scan_outdir     = '~/data/ms2840a/scan_test/2021-10-25/data'
-    scan_outdir     = '~/data/ms2840a/scan2/2021-10-26/data'
+    scan_outdir     = '~/data/ms2840a/scan3/2021-10-26/data'
     outdir  = '~/scripts/output/plotting'
     outname = 'scanpars_result'
     
