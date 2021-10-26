@@ -11,22 +11,31 @@ import ms2840a
 def run_scanpars(configs, 
         filename_prefix='scan', 
         filename_add_suffix=False, 
-        noplot = True, 
+        noplot = True, overwrite=False,
         outdir = '~/data/ms2840a/scan'):
 
     for config in configs:
-        filename = filename_prefix+'_{mode}_{freq_start:f.1}GHz_dv{freq_span*1.e-3:f.2}MHz_{rbw*1e-3:f.1}kHz_{meas_time}sec_{nAve}_{nRun}'.format(config)
+        mode = config['mode']
+        freq_start = config['freq_start']
+        freq_span = config['freq_span']
+        rbw = config['rbw']
+        meas_time = config['meas_time']
+        nAve = config['nAve']
+        nRun = config['nRun']
+        filename = filename_prefix+f'_{mode}_{freq_start:.1f}GHz_span{freq_span*1.e-3:.2f}MHz_rbw{rbw:.1f}kHz_{meas_time:.1f}sec_{nAve:d}counts_{nRun:d}runs'
         try:
-            ret = main(
-                mode       = config['mode'], 
-                freq_start = config['freq_start'],
-                freq_span  = config['freq_span'],
-                rbw        = config['rbw'],
-                meas_time  = config['meas_time'],
-                nAve       = config['nAve'],
-                nRun       = config['nRun'],
+            ret = ms2840a.main(
+                mode       = mode, 
+                freq_start = freq_start,
+                freq_span  = freq_span,
+                rbw        = rbw,
+                meas_time  = meas_time,
+                nAve       = nAve,
+                nRun       = nRun,
                 outdir     = outdir, 
                 filename   = filename,
+                noplot     = noplot,
+                overwrite  = overwrite,
                 filename_add_suffix = filename_add_suffix)
         except Exception as e:
             print(f'run_scanpars(): Error! {e} for {filename}')
@@ -102,24 +111,27 @@ def create_configs(modes, freq_starts, freq_spans, rbws, meas_times, nAves, nRun
 if __name__=='__main__':
     # Global settings
     filename_prefix = 'scan'
-    #outdir = '~/data/ms2840a/scan'
-    outdir = '~/data/ms2840a/scan_test'
+    outdir = '~/data/ms2840a/scan3'
     noplot = True
+    overwrite = True
+    run = True
 
     # Scan parameters
     modes = ['FFT'] # FFT or SWEEP
     freq_starts = [20.] # GHz
-    freq_spans  = [1.e+3, 2.5e+3, 5.e+3, 10.e+3] # kHz
+    #freq_spans  = [1.e+3, 2.5e+3, 5.e+3, 10.e+3] # kHz
+    freq_spans  = [1.e+3, 2.5e+3] # kHz
+    #freq_spans  = [5.e+3] # kHz
     rbws = [0.1, 0.3, 0.5, 1] # kHz
-    #meas_times = [1,2,5,10,20] # sec
-    meas_times = [1,2] # sec
-    #nAves = [1,10] # times
-    nAves = [1,2] # times
+    meas_times = [1,2,5,10,20] # sec
+    #meas_times = [1,2] # sec
+    nAves = [1,10] # times
+    #nAves = [1,2] # times
     nRuns = [1] # times
 
     configs = np.array(create_configs(modes, freq_starts, freq_spans, rbws, meas_times, nAves, nRuns))
 
     print(f'configs (size={len(configs)}):')
     print(configs)
-    run_scanpars(configs, noplot=noplot, filename_prefix=filename_prefix, outdir=outdir)
+    if run: run_scanpars(configs, noplot=noplot, overwrite=overwrite, filename_prefix=filename_prefix, outdir=outdir)
     pass

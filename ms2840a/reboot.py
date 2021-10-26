@@ -57,8 +57,11 @@ def read_data(soc):
 
 
 def reboot(run=False) :
+    print('socket')
     soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
+    print('connect')
     soc.connect((IP_ADDRESS, PORT))
+    print('settimeout')
     soc.settimeout(10)
 
     # Reboot

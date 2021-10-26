@@ -14,7 +14,7 @@ plt.ioff()
 
 IP_ADDRESS = '192.168.215.247'
 PORT = 49153
-TIMEOUT = 100
+TIMEOUT = 600
 
 g_colors = ['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
         'tab:brown','tab:pink','tab:olive','tab:cyan','tab:gray','red',
@@ -39,7 +39,7 @@ class DATA:
         return self._freq
 
     @property
-    def dfreq(self):
+    def freq_binwidth(self):
         return np.diff(self._freq)
 
     @property
@@ -74,7 +74,6 @@ class MS2840A:
             ret_msg = b''
             end     = b'\n'[0]
             pass
-        self._soc.settimeout(self.timeout)
         while True:
             try:
                 rcvmsg = self._soc.recv(1024)
@@ -96,7 +95,7 @@ class MS2840A:
             print(f'MS2840A:_wr(): Error! Failed to read for the command: "{word}"')
             print(f'MS2840A:_wr(): Error!  --> Exit')
             self._soc.close()
-            sys.exit(1)
+            return None
             pass
         return r
 
@@ -173,6 +172,7 @@ class MS2840A:
             npoints = self.trace_points
             nread = math.ceil(npoints/5121.)
             if verbose>0: print(f'npoints={npoints}')
+            self._soc.settimeout(max(self.capt_time*self.trace_nAve*10, self.timeout))
             for i in range(nread):
                 start   = 5121*i
                 nremain = npoints - start
@@ -181,9 +181,12 @@ class MS2840A:
                 _rawdata = self.decode_data(_rawbin, verbose)
                 data +=_rawdata
                 pass
+            self._soc.settimeout(self.timeout)
         else       : 
+            self._soc.settimeout(max(self.sweep_time*self.trace_nAve*10, self.timeout))
             _rawbin = self._wr('TRAC:DATA? TRAC1', decode=False)
             data    = self.decode_data(_rawbin, verbose)
+            self._soc.settimeout(self.timeout)
             pass
         if data is None:
             return None
@@ -238,15 +241,16 @@ class MS2840A:
         self.trace_mode = 'SPEC'
         self.det_mode   = 'AVER'
         # Variable setting
+        self.ana_time = 0 # set temporarily
+        self.freq_span  = freq_span # [GHz]
+        self.band_wid   = rbw # [kHz]
+        if step is not None: self.freq_step = step # [kHz]
         if time is not None: self.ana_time = time # [sec]
         else               : 
             print('MS2840A:fft_setting(): Warning! There is no argument of measurement time for one trace.')
             print('MS2840A:fft_setting(): Warning! --> analysis time is set to AUTO.')
             self.is_ana_time_auto = True 
             pass
-        self.freq_span  = freq_span # [GHz]
-        self.band_wid   = rbw # [kHz]
-        if step is not None: self.freq_step = step # [kHz]
         self.freq_start = freq_start # [GHz]
         self.trace_nAve = nAve
 
@@ -611,14 +615,14 @@ class MS2840A:
             pass
     @property
     def trace_nAve(self) -> int:
-        return int(self._wr('AVER:COUN?'))
+        if self._nAve>1: return int(self._wr('AVER:COUN?'))
+        else           : return self._nAve
     @trace_nAve.setter
     def trace_nAve(self, nAve:int ):
-        if nAve==1:
-            self.trace_storemode = 'OFF'
-        else :
+        self._nAve = nAve
+        if nAve>1:
             self.trace_storemode = 'LAV' # Trace store mode is chaned to 'average' mode.
-            self._w(f'AVER:COUN {nAve}')
+            self._w(f'AVER:COUN {nAve}') # range: nAve>=2
 
     ## Detection mode
     @property
@@ -701,7 +705,8 @@ def main(mode='FFT',
         meas_time  = None, # sec
         nAve       = 10, # times (number of average for each data)
         nRun       = 10, # times (number of run or saved data)
-        outdir='~/data/ms2840a', noplot=False, filename=None, filename_add_suffix=True):
+        outdir='~/data/ms2840a', noplot=False, overwrite=False,
+        filename=None, filename_add_suffix=True):
 
     # Initialize connection
     ms = MS2840A()
@@ -813,7 +818,9 @@ def main(mode='FFT',
     fdatapaths = np.array([ f'{todaydir}/data/{filename}_{i}.dat' for i in range(nResult) ] if nResult>1 else [f'{todaydir}/data/{filename}.dat'])
     isexists   = np.array([ os.path.exists(path) for path in fdatapaths ])
     if np.any(isexists) :
-        _filename = input("other : ")
+        print(f'Warnign! The filename(={filename}) exists!')
+        if overwrite: _filename = filename;
+        else        : _filename = input("other : ")
         if _filename == filename: print(f'Warning! The output file ({fdatapaths[isexists]}) is overwriten!')
         filename = _filename
         fdatapaths = np.array([ f'{todaydir}/data/{filename}_{i}.dat' for i in range(nResult) ] if nResult>1 else [f'{todaydir}/data/{filename}.dat'])
@@ -852,14 +859,14 @@ def main(mode='FFT',
     for i, path in enumerate(fdatapaths):
         f.write(f'filepath{i}, {path}, \n')
         pass
-    dfreq = np.mean(results[0].dfreq)
+    freq_binwidth = np.mean(results[0].freq_binwidth)
     f.write(f'start-time, {time_str}, \n')
     f.write(f'mode, {"FFT" if fftmode else "SWEEP"},\n')
     f.write(f'freq-start, {ms.freq_start:e}, Hz\n')
     f.write(f'freq-stop, {ms.freq_stop:e}, Hz\n')
     f.write(f'freq-span, {ms.freq_span:e}, Hz\n')
     f.write(f'freq-step, {ms.freq_step:e}, Hz\n')
-    f.write(f'dfreq, {dfreq:e}, Hz\n')
+    f.write(f'freq-binwidth, {freq_binwidth:e}, Hz\n')
     f.write(f'RBW, {ms.band_wid:e}, Hz\n')
     f.write(f'count, {ms.trace_nAve}, counts\n')
     f.write(f'nRun, {nResult}, times\n')
@@ -895,7 +902,7 @@ def main(mode='FFT',
     means = [ np.mean(result.amp) for result in results ] # [W]
     stds  = [ np.std(result.amp) for result in results ] # [W]
     neps  = np.multiply(stds, np.sqrt(eff_time)) # [W*sqrt(sec)]
-    nPoints100kHz = (int)(1.e+5/dfreq)
+    nPoints100kHz = (int)(1.e+5/freq_binwidth)
     stdsEvery100kHz = [ np.std(result.amp[::nPoints100kHz]) for result in results ] # [W]
     nepsEvery100kHz  = np.multiply(stds, np.sqrt(eff_time)) # [W*sqrt(sec)]
     f.write(f'# Data statistics\n')
@@ -946,6 +953,7 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--nRun', dest='nRun', default=nRun, type=int, help=f'Number of runs to be recorded separately (default: {nRun} times)')
     parser.add_argument('-o', '--outdir', default=outdir, help=f'Output directory name (default: {outdir})')
     parser.add_argument('--noplot', default=False, action='store_true', help=f'Not create plots (default: False)')
+    parser.add_argument('--overwrite', default=False, action='store_true', help=f'Overwrite the output files even if there is the same filename data (default: False)')
     parser.add_argument('-f', '--filename', default=filename, help=f'Output filename. If it is None, filename will be asked after measurements. (default: {filename})')
     parser.add_argument('--filename_add_suffix', default=filename_add_suffix, help=f'Add suffix on output filename (default: {filename_add_suffix})')
     args = parser.parse_args()
@@ -960,6 +968,7 @@ if __name__ == '__main__':
         nRun       = args.nRun,
         outdir     = args.outdir, 
         noplot     = args.noplot,
+        overwrite  = args.overwrite,
         filename   = args.filename,
         filename_add_suffix = args.filename_add_suffix)
 
