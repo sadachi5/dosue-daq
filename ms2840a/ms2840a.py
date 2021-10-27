@@ -69,10 +69,10 @@ class MS2840A:
     def _r(self, decode=True):
         if decode:
             ret_msg = ''
-            end     = '\n'
+            end     = '\r\n'
         else :
             ret_msg = b''
-            end     = b'\n'[0]
+            end     = b'\r\n'
             pass
         while True:
             try:
@@ -84,9 +84,10 @@ class MS2840A:
                 return None
             ret_msg += rcvmsg
             #print(rcvmsg[-1],end,rcvmsg[-1] == end)
-            if rcvmsg[-1] == end:
+            #if rcvmsg[-1] == end:
+            if rcvmsg[-2] == end[0] and rcvmsg[-1] == end[1] :
                 break        
-        return ret_msg.strip()
+        return ret_msg.strip() if decode else ret_msg[:-2]
 
     def _wr(self, word, decode=True):
         self._w(word)
@@ -202,7 +203,7 @@ class MS2840A:
             else :
                 pass
             print(f'trace points   = {self.trace_points} points')
-            print(f'sampling rate  = {self.freq_samp*1e-3} kHz')
+            print(f'sampling rate  = {self.freq_samp} Hz')
             print(f'data (size={len(data)}) = {data}')
         return DATA(data, self.freq_start, self.freq_span, ut)
 
@@ -420,7 +421,7 @@ class MS2840A:
         return float(self._wr('BWID?')) # [Hz]
     @band_wid.setter
     def band_wid(self, wid_kHz):
-        self.is_band_wid_auto = 0 # AUTO band width OFF
+        self.is_band_wid_auto = False # AUTO band width OFF
         self._w(f'BWID {wid_kHz}KHZ')
 
     ## Auto VBW (Video Bandwidth, only for SWEEP mode)
@@ -731,7 +732,7 @@ def main(mode='FFT',
         start_time = time.time()
         for i in range(nRun):
             print(f'i={i+1}/{nRun} fft_run()')
-            result = ms.fft_run(verbose=0)
+            result = ms.fft_run(verbose=2)
             if result is None :
                 print(f'FFT is failed! The return of fft_run is {result}.')
                 return 0
@@ -893,7 +894,7 @@ def main(mode='FFT',
     eff_time = ms.ana_time*(float)(ms.trace_nAve*nResult) if fftmode else ms.sweep_time*(float)(ms.trace_nAve*nResult)
     dutyratio = eff_time/run_time;
     f.write(f'duty-ratio, {dutyratio}, \n')
-    f.write(f'duty-ratio*span, {dutyratio*(ms.freq_span*2.e-6)}, MHz\n')
+    f.write(f'duty-ratio*span, {dutyratio*(ms.freq_span*1.e-6)}, MHz\n')
     f.write(f'span/duty-ratio, {(ms.freq_span*1.e-6)/dutyratio}, MHz\n')
 
     # Calculate data statistics
@@ -903,7 +904,7 @@ def main(mode='FFT',
     stds  = [ np.std(result.amp) for result in results ] # [W]
     neps  = np.multiply(stds, np.sqrt(eff_time)) # [W*sqrt(sec)]
     nPoints100kHz = (int)(1.e+5/freq_binwidth)
-    stdsEvery100kHz = [ np.std(result.amp[::nPoints100kHz]) for result in results ] # [W]
+    stdsEvery100kHz = [ np.std(result.amp[::nPoints100kHz]) if nPoints100kHz>0 else 0. for result in results ] # [W]
     nepsEvery100kHz  = np.multiply(stds, np.sqrt(eff_time)) # [W*sqrt(sec)]
     f.write(f'# Data statistics\n')
     f.write(f'mean, {np.mean(means):e}, W\n')

@@ -29,7 +29,8 @@ def read(soc):
             return None
         print('1');
         ret_msg += rcvmsg
-        if rcvmsg[-1] == '\n':
+        #if rcvmsg[-1] == '\n':
+        if rcvmsg[-2:] == '\r\n':
             break        
         print('2');
         i=i+1
@@ -84,6 +85,7 @@ def test() :
     print(writeread(soc, 'SYST:ERR?'));
     print(writeread(soc, 'INST:SYST? SIGANA'))
     print(writeread(soc, 'DET?'))
+    #print(writeread(soc, 'SYST:COMM:GPIB:DEL?')) # NOTE: Could not get the response to this command!
     #'''
 
     '''

@@ -63,6 +63,7 @@ def create_configs(modes, freq_starts, freq_spans, rbws, meas_times, nAves, nRun
             [1.e+3,30.], [2.5e+3,100.], [10.e+3,300.], [31.25e+3,1.e+3]]) # [max span(kHz), max rbw(kHz)]
     fft_rbw_max_spans = fft_rbw_max[:,0]
     fft_rbw_max_rbws  = fft_rbw_max[:,1]
+    rbw_values = [1.e-3,3.e-3,1.e-2,3.e-2,1.e-1,3.e-1,1.,3.,1.e+1,3.e+1,1.e+2,3.e+2,1.e+3]
     for mode in modes:
         if not mode in ['FFT', 'SWEEP']:
             print(f'create_configs(): Error! There is no mode of {mode}')
@@ -71,6 +72,11 @@ def create_configs(modes, freq_starts, freq_spans, rbws, meas_times, nAves, nRun
         for freq_start in freq_starts:
             for freq_span in freq_spans:
                 for rbw in rbws:
+                    if not (rbw in rbw_values): 
+                        print(f'create_configs(): Warning! RBW {rbw} kHz is not in valid rbw values.')
+                        print(f'create_configs(): Warning! --> Skip!')
+                        continue
+                        pass
                     if mode=='FFT':
                         rbw_min = fft_rbw_min_rbws[freq_span<=fft_rbw_min_spans][0]
                         rbw_max = fft_rbw_max_rbws[freq_span>=fft_rbw_max_spans][-1]
@@ -120,9 +126,10 @@ if __name__=='__main__':
     modes = ['FFT'] # FFT or SWEEP
     freq_starts = [20.] # GHz
     #freq_spans  = [1.e+3, 2.5e+3, 5.e+3, 10.e+3] # kHz
-    freq_spans  = [1.e+3, 2.5e+3] # kHz
+    #freq_spans  = [1.e+3, 2.5e+3] # kHz
     #freq_spans  = [5.e+3] # kHz
-    rbws = [0.1, 0.3, 0.5, 1] # kHz
+    freq_spans  = [10.e+3] # kHz
+    rbws = [0.1, 0.3, 1] # kHz
     meas_times = [1,2,5,10,20] # sec
     #meas_times = [1,2] # sec
     nAves = [1,10] # times
