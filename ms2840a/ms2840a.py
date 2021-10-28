@@ -913,8 +913,8 @@ def main(mode='FFT',
         nPoints100kHz = (int)(1.e+5/freq_binwidth)
         n100kHz       = (int)(len(results[0].freq)/nPoints100kHz)
         ampsEvery100kHz = [ result.amp[:nPoints100kHz*n100kHz].reshape(nPoints100kHz,n100kHz) for result in results ]
-        stdsEvery100kHz = [ np.std(amp, axis=1) if nPoints100kHz>0 else 0. for amp in ampsEvery100kHz ] # [W] NOTE: Need to check
-        nepsEvery100kHz  = np.multiply(stds, np.sqrt(eff_time)) # [W*sqrt(sec)]
+        stdsEvery100kHz = [ np.mean(np.std(amp, axis=1)) if nPoints100kHz>0 else 0. for amp in ampsEvery100kHz ] # [W] NOTE: Need to check
+        nepsEvery100kHz  = np.multiply(stdsEvery100kHz, np.sqrt(eff_time)) # [W*sqrt(sec)]
         f.write(f'# Data statistics\n')
         f.write(f'mean, {np.mean(means):e}, W\n')
         f.write(f'std, {np.mean(stds):e}, W\n')
