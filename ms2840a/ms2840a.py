@@ -706,7 +706,7 @@ def main(mode='FFT',
         meas_time  = None, # sec
         nAve       = 10, # times (number of average for each data)
         nRun       = 10, # times (number of run or saved data)
-        outdir='~/data/ms2840a', noplot=False, overwrite=False,
+        outdir='~/data/ms2840a', noplot=False, overwrite=False, shortconfig=False,
         filename=None, filename_add_suffix=True):
 
     # Initialize connection
@@ -732,7 +732,7 @@ def main(mode='FFT',
         start_time = time.time()
         for i in range(nRun):
             print(f'i={i+1}/{nRun} fft_run()')
-            result = ms.fft_run(verbose=2)
+            result = ms.fft_run(verbose=0)
             if result is None :
                 print(f'FFT is failed! The return of fft_run is {result}.')
                 return 0
@@ -819,10 +819,16 @@ def main(mode='FFT',
     fdatapaths = np.array([ f'{todaydir}/data/{filename}_{i}.dat' for i in range(nResult) ] if nResult>1 else [f'{todaydir}/data/{filename}.dat'])
     isexists   = np.array([ os.path.exists(path) for path in fdatapaths ])
     if np.any(isexists) :
-        print(f'Warnign! The filename(={filename}) exists!')
+        print(f'Warning! The filename(={filename}) exists!')
         if overwrite: _filename = filename;
         else        : _filename = input("other : ")
-        if _filename == filename: print(f'Warning! The output file ({fdatapaths[isexists]}) is overwriten!')
+        if _filename=='':
+            print(f'Warning! Do NOT save the data!')
+            ms.close()
+            plt.close()
+            print('End')
+            return 0
+        elif _filename == filename: print(f'Warning! The output file ({fdatapaths[isexists]}) is overwriten!')
         filename = _filename
         fdatapaths = np.array([ f'{todaydir}/data/{filename}_{i}.dat' for i in range(nResult) ] if nResult>1 else [f'{todaydir}/data/{filename}.dat'])
         pass
@@ -890,40 +896,42 @@ def main(mode='FFT',
     f.write(f'# Elapsed time\n')
     f.write(f'time-setting, {setting_time}, sec\n')
     f.write(f'time-run, {run_time}, sec\n')
-    f.write(f'time/MHz, {run_time/(ms.freq_span*1.e-6)}, sec/MHz\n')
-    eff_time = ms.ana_time*(float)(ms.trace_nAve*nResult) if fftmode else ms.sweep_time*(float)(ms.trace_nAve*nResult)
-    dutyratio = eff_time/run_time;
-    f.write(f'duty-ratio, {dutyratio}, \n')
-    f.write(f'duty-ratio*span, {dutyratio*(ms.freq_span*1.e-6)}, MHz\n')
-    f.write(f'span/duty-ratio, {(ms.freq_span*1.e-6)/dutyratio}, MHz\n')
-
-    # Calculate data statistics
-    mins  = [ np.min(result.amp) for result in results ] # [W]
-    maxs  = [ np.max(result.amp) for result in results ] # [W]
-    means = [ np.mean(result.amp) for result in results ] # [W]
-    stds  = [ np.std(result.amp) for result in results ] # [W]
-    neps  = np.multiply(stds, np.sqrt(eff_time)) # [W*sqrt(sec)]
-    nPoints100kHz = (int)(1.e+5/freq_binwidth)
-    stdsEvery100kHz = [ np.std(result.amp[::nPoints100kHz]) if nPoints100kHz>0 else 0. for result in results ] # [W]
-    nepsEvery100kHz  = np.multiply(stds, np.sqrt(eff_time)) # [W*sqrt(sec)]
-    f.write(f'# Data statistics\n')
-    f.write(f'mean, {np.mean(means):e}, W\n')
-    f.write(f'std, {np.mean(stds):e}, W\n')
-    f.write(f'std-100kHz, {np.mean(stdsEvery100kHz):e}, W\n')
-    f.write(f'nep, {np.mean(neps):e}, W/sqrt(Hz)\n')
-    f.write(f'nep-100kHz, {np.mean(nepsEvery100kHz):e}, W/sqrt(Hz)\n')
-    f.write(f'min, {np.mean(mins):e}, W\n')
-    f.write(f'max, {np.mean(maxs):e}, W\n')
-    for i in range(nResult):
-        f.write(f'mean{i}, {means[i]:e}, W\n')
-        f.write(f'std{i}, {stds[i]:e}, W\n')
-        f.write(f'std-100kHz{i}, {stdsEvery100kHz[i]:e}, W\n')
-        f.write(f'nep{i}, {neps[i]:e}, W/sqrt(Hz)\n')
-        f.write(f'nep-100kHz{i}, {nepsEvery100kHz[i]:e}, W/sqrt(Hz)\n')
-        f.write(f'min{i}, {mins[i]:e}, W\n')
-        f.write(f'max{i}, {maxs[i]:e}, W\n')
+    if not shortconfig: 
+        f.write(f'time/MHz, {run_time/(ms.freq_span*1.e-6)}, sec/MHz\n')
+        eff_time = ms.ana_time*(float)(ms.trace_nAve*nResult) if fftmode else ms.sweep_time*(float)(ms.trace_nAve*nResult)
+        dutyratio = eff_time/run_time;
+        f.write(f'duty-ratio, {dutyratio}, \n')
+        f.write(f'duty-ratio*span, {dutyratio*(ms.freq_span*1.e-6)}, MHz\n')
+        f.write(f'span/duty-ratio, {(ms.freq_span*1.e-6)/dutyratio}, MHz\n')
+ 
+        # Calculate data statistics
+        mins  = [ np.min(result.amp) for result in results ] # [W]
+        maxs  = [ np.max(result.amp) for result in results ] # [W]
+        means = [ np.mean(result.amp) for result in results ] # [W]
+        stds  = [ np.std(result.amp) for result in results ] # [W]
+        neps  = np.multiply(stds, np.sqrt(eff_time)) # [W*sqrt(sec)]
+        nPoints100kHz = (int)(1.e+5/freq_binwidth)
+        #ampEvery100kHz = np.
+        stdsEvery100kHz = [ np.std(result.amp[::nPoints100kHz]) if nPoints100kHz>0 else 0. for result in results ] # [W] # NOTE: This calculation is wrong!! Please fix me!
+        nepsEvery100kHz  = np.multiply(stds, np.sqrt(eff_time)) # [W*sqrt(sec)]
+        f.write(f'# Data statistics\n')
+        f.write(f'mean, {np.mean(means):e}, W\n')
+        f.write(f'std, {np.mean(stds):e}, W\n')
+        f.write(f'std-100kHz, {np.mean(stdsEvery100kHz):e}, W\n')
+        f.write(f'nep, {np.mean(neps):e}, W/sqrt(Hz)\n')
+        f.write(f'nep-100kHz, {np.mean(nepsEvery100kHz):e}, W/sqrt(Hz)\n')
+        f.write(f'min, {np.mean(mins):e}, W\n')
+        f.write(f'max, {np.mean(maxs):e}, W\n')
+        for i in range(nResult):
+            f.write(f'mean{i}, {means[i]:e}, W\n')
+            f.write(f'std{i}, {stds[i]:e}, W\n')
+            f.write(f'std-100kHz{i}, {stdsEvery100kHz[i]:e}, W\n')
+            f.write(f'nep{i}, {neps[i]:e}, W/sqrt(Hz)\n')
+            f.write(f'nep-100kHz{i}, {nepsEvery100kHz[i]:e}, W/sqrt(Hz)\n')
+            f.write(f'min{i}, {mins[i]:e}, W\n')
+            f.write(f'max{i}, {maxs[i]:e}, W\n')
+            pass
         pass
-
     
     ms.close()
     print('End')
@@ -955,6 +963,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--outdir', default=outdir, help=f'Output directory name (default: {outdir})')
     parser.add_argument('--noplot', default=False, action='store_true', help=f'Not create plots (default: False)')
     parser.add_argument('--overwrite', default=False, action='store_true', help=f'Overwrite the output files even if there is the same filename data (default: False)')
+    parser.add_argument('--shortconfig', default=False, action='store_true', help=f'Output csv file has short configuration info. (default: False)')
     parser.add_argument('-f', '--filename', default=filename, help=f'Output filename. If it is None, filename will be asked after measurements. (default: {filename})')
     parser.add_argument('--filename_add_suffix', default=filename_add_suffix, help=f'Add suffix on output filename (default: {filename_add_suffix})')
     args = parser.parse_args()
@@ -970,6 +979,7 @@ if __name__ == '__main__':
         outdir     = args.outdir, 
         noplot     = args.noplot,
         overwrite  = args.overwrite,
+        shortconfig= args.shortconfig,
         filename   = args.filename,
         filename_add_suffix = args.filename_add_suffix)
 
