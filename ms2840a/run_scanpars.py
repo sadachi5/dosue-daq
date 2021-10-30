@@ -132,7 +132,7 @@ if __name__=='__main__':
     rbws = [0.3] # kHz
     meas_times = [10] # sec
     nAves = [1] # times
-    nRuns = [30] # times
+    nRuns = [12] # times
 
     # For test
     '''

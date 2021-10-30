@@ -66,7 +66,7 @@ class MS2840A:
         word += '\r\n'
         self._soc.send(word.encode())
 
-    def _r(self, decode=True):
+    def _r(self, decode=True, verbose=0):
         if decode:
             ret_msg = ''
             end     = '\r\n'
@@ -77,6 +77,7 @@ class MS2840A:
         while True:
             try:
                 rcvmsg = self._soc.recv(1024)
+                if verbose>1 : print(f'M2850A:_r(): raw rcvmsg = {rcvmsg}')
                 if decode: rcvmsg = rcvmsg.decode()
             except Exception as e:
                 print(f'MS2840A:_r(): Error! {e}')
@@ -87,11 +88,13 @@ class MS2840A:
             #if rcvmsg[-1] == end:
             if rcvmsg[-2] == end[0] and rcvmsg[-1] == end[1] :
                 break        
+        if verbose>1 : print(f'M2850A:_r(): ret_msg = {ret_msg}')
         return ret_msg.strip() if decode else ret_msg[:-2]
 
-    def _wr(self, word, decode=True):
+    def _wr(self, word, decode=True, verbose=0):
+        if verbose>1 : print(f'M2850A:_wr(): command = {word}')
         self._w(word)
-        r = self._r(decode=decode)
+        r = self._r(decode=decode, verbose=verbose)
         if r is None :
             print(f'MS2840A:_wr(): Error! Failed to read for the command: "{word}"')
             print(f'MS2840A:_wr(): Error!  --> Exit')
@@ -178,14 +181,14 @@ class MS2840A:
                 start   = 5121*i
                 nremain = npoints - start
                 length  = 5121 if nremain>=5121 else nremain
-                _rawbin = self._wr(f'TRAC:DATA? {start},{length}', decode=False)
+                _rawbin = self._wr(f'TRAC:DATA? {start},{length}', decode=False, verbose=verbose)
                 _rawdata = self.decode_data(_rawbin, verbose)
                 data +=_rawdata
                 pass
             self._soc.settimeout(self.timeout)
         else       : 
             self._soc.settimeout(max(self.sweep_time*self.trace_nAve*10, self.timeout))
-            _rawbin = self._wr('TRAC:DATA? TRAC1', decode=False)
+            _rawbin = self._wr('TRAC:DATA? TRAC1', decode=False, verbose=verbose)
             data    = self.decode_data(_rawbin, verbose)
             self._soc.settimeout(self.timeout)
             pass
@@ -221,6 +224,7 @@ class MS2840A:
         print(f'trace points   = {self.trace_points} points')
         print(f'# of storage data = {self.trace_nAve} times (averaging {self.trace_nAve} times)')
         print(f'detection mode = {self.det_mode}')
+        print(f'data format    = {self.data_format}')
         self.print_error()
         print()
 
@@ -241,6 +245,7 @@ class MS2840A:
         self.ana_start = 0.
         self.trace_mode = 'SPEC'
         self.det_mode   = 'AVER'
+        self.data_format = 'REAL'
         # Variable setting
         self.ana_time = 0 # set temporarily
         self.freq_span  = freq_span # [GHz]
@@ -260,8 +265,8 @@ class MS2840A:
         return 0
 
     def fft_run(self, verbose=0):
-        if self._fftmode is None :
-            print('MS2840A:fft_run(): Error! fft or sweep mode (self._fftmode) is not set.')
+        if self._fftmode != True:
+            print('MS2840A:fft_run(): Error! self._fftmode should be "True" but it is "{self._fftmode}".')
             return None
         self._wait()
         if verbose>0 : self.print_fft_setting()
@@ -289,6 +294,7 @@ class MS2840A:
         print(f'trace points   = {self.trace_points} points')
         print(f'# of storage data = {self.trace_nAve} times (averaging {self.trace_nAve} times)')
         print(f'detection mode = {self.det_mode}')
+        print(f'data format    = {self.data_format}')
         self.print_error()
         print()
 
@@ -318,6 +324,7 @@ class MS2840A:
             self.sweep_time = time
             pass
         self.sweep_type = 'OSWeep' # sweep only mode (no FFT)
+        self.data_format = 'REAL'
         # Variable setting
         self.band_wid   = rbw # [kHz]
         if step is not None: self.freq_step = step # [kHz]
@@ -332,8 +339,8 @@ class MS2840A:
         return 0
 
     def sweep_run(self, verbose=0):
-        if self._fftmode is None :
-            print('MS2840A:fft_run(): Error! fft or sweep mode (self._fftmode) is not set.')
+        if self._fftmode != False :
+            print('MS2840A:sweep_run(): Error! self._fftmode should be "False" but it is "{self._fftmode}".')
             return None
         if verbose>0 : self.print_sweep_setting()
         data = self.read_data(verbose=verbose)
@@ -707,7 +714,7 @@ def main(mode='FFT',
         nAve       = 10, # times (number of average for each data)
         nRun       = 10, # times (number of run or saved data)
         outdir='~/data/ms2840a', noplot=False, overwrite=False, shortconfig=False,
-        filename=None, filename_add_suffix=True):
+        filename=None, filename_add_suffix=True, verbose=0):
 
     # Initialize connection
     ms = MS2840A()
@@ -724,7 +731,7 @@ def main(mode='FFT',
         step = 1. # kHz
         # fft setting
         start_time = time.time()
-        ms.fft_setting(freq_start=freq_start, freq_span=freq_span, rbw=rbw, time=meas_time, step=step, nAve=nAve, verbose=1)
+        ms.fft_setting(freq_start=freq_start, freq_span=freq_span, rbw=rbw, time=meas_time, step=step, nAve=nAve, verbose=verbose+1)
         stop_time = time.time()
         setting_time = stop_time-start_time
         print(f'Elapsed time for fft_setting() = {setting_time} sec')
@@ -732,7 +739,7 @@ def main(mode='FFT',
         start_time = time.time()
         for i in range(nRun):
             print(f'i={i+1}/{nRun} fft_run()')
-            result = ms.fft_run(verbose=0)
+            result = ms.fft_run(verbose=verbose)
             if result is None :
                 print(f'FFT is failed! The return of fft_run is {result}.')
                 return 0
@@ -749,7 +756,7 @@ def main(mode='FFT',
         step      = 1. # kHz
         # fft setting
         start_time = time.time()
-        ms.sweep_setting(freq_start=freq_start, freq_stop=freq_stop, rbw=rbw, time=meas_time, step=step, nAve=nAve, verbose=1)
+        ms.sweep_setting(freq_start=freq_start, freq_stop=freq_stop, rbw=rbw, time=meas_time, step=step, nAve=nAve, verbose=verbose+1)
         stop_time = time.time()
         setting_time  = stop_time - start_time
         print(f'Elapsed time for sweep_setting() = {setting_time} sec')
@@ -757,7 +764,7 @@ def main(mode='FFT',
         start_time = time.time()
         for i in range(nRun):
             print(f'i={i+1}/{nRun} sweep_run()')
-            result = ms.sweep_run(verbose=0)
+            result = ms.sweep_run(verbose=verbose)
             if result is None :
                 print(f'SWEEP is failed! The return of sweep_run is {result}.')
                 return 0
@@ -911,8 +918,8 @@ def main(mode='FFT',
         stds  = [ np.std(result.amp) for result in results ] # [W]
         neps  = np.multiply(stds, np.sqrt(eff_time)) # [W*sqrt(sec)]
         nPoints100kHz = (int)(1.e+5/freq_binwidth)
-        n100kHz       = (int)(len(results[0].freq)/nPoints100kHz)
-        ampsEvery100kHz = [ result.amp[:nPoints100kHz*n100kHz].reshape(nPoints100kHz,n100kHz) for result in results ]
+        n100kHz       = (int)(len(results[0].freq)/nPoints100kHz) if nPoints100kHz>0. else 0.
+        ampsEvery100kHz = [ result.amp[:nPoints100kHz*n100kHz].reshape(nPoints100kHz,n100kHz) if nPoints100kHz>0 else [] for result in results ]
         stdsEvery100kHz = [ np.mean(np.std(amp, axis=1)) if nPoints100kHz>0 else 0. for amp in ampsEvery100kHz ] # [W] NOTE: Need to check
         nepsEvery100kHz  = np.multiply(stdsEvery100kHz, np.sqrt(eff_time)) # [W*sqrt(sec)]
         f.write(f'# Data statistics\n')
@@ -945,12 +952,12 @@ if __name__ == '__main__':
     filename   = None
     filename_add_suffix = False
     ## 
-    mode = 'FFT' # SWEEP or FFT
-    freq_start = 19.99995  #GHz
-    freq_span  = 1.e+2 #kHz
-    rbw        = 1 #kHz
+    mode = 'SWEEP' # SWEEP or FFT
+    freq_start = 16  #GHz
+    freq_span  = 10.5e+6 #kHz
+    rbw        = 1000 #kHz
     meas_time  = None # sec (FFT: measurement time / SWEE: sweep time)
-    nAve       = 1 # times (averaging number of measurements = counts)
+    nAve       = 100 # times (averaging number of measurements = counts)
     nRun       = 1 # times (number of run to be recorded separately)
 
     parser = argparse.ArgumentParser()
@@ -967,6 +974,7 @@ if __name__ == '__main__':
     parser.add_argument('--shortconfig', default=False, action='store_true', help=f'Output csv file has short configuration info. (default: False)')
     parser.add_argument('-f', '--filename', default=filename, help=f'Output filename. If it is None, filename will be asked after measurements. (default: {filename})')
     parser.add_argument('--filename_add_suffix', default=filename_add_suffix, help=f'Add suffix on output filename (default: {filename_add_suffix})')
+    parser.add_argument('-v', '--verbose', dest='verbose', default=0, type=int, help=f'Print out verbosity (default: 0)')
     args = parser.parse_args()
 
     ret = main(
@@ -982,5 +990,6 @@ if __name__ == '__main__':
         overwrite  = args.overwrite,
         shortconfig= args.shortconfig,
         filename   = args.filename,
-        filename_add_suffix = args.filename_add_suffix)
+        filename_add_suffix = args.filename_add_suffix,
+        verbose    = args.verbose)
 
