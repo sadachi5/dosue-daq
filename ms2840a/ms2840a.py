@@ -6,6 +6,7 @@ import pathlib
 import math
 import struct
 import time
+import pickle
 
 import socket
 import numpy as np
@@ -21,10 +22,11 @@ g_colors = ['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
         'royalblue','turquoise','darkolivegreen','magenta','blue','green']*5
 
 class DATA:
-    def __init__(self, powDBm, freq_start, freq_span, MesTimePoint):
+    def __init__(self, powDBm, freq_start, freq_span, MesTimePoint, binary_data=None):
         self._freq = np.linspace(freq_start,freq_start+freq_span,len(powDBm))
         self._powDBm = np.array(powDBm)
         self._time = MesTimePoint
+        self._binary_data = binary_data
 
     @property
     def powDBm(self):
@@ -45,6 +47,10 @@ class DATA:
     @property
     def time(self):
         return self._time
+
+    @property
+    def binary_data(self):
+        return self._binary_data
 
 
 
@@ -84,8 +90,6 @@ class MS2840A:
                 print(f'MS2840A:_r(): Error! --> Close socket connection!')
                 return None
             ret_msg += rcvmsg
-            #print(rcvmsg[-1],end,rcvmsg[-1] == end)
-            #if rcvmsg[-1] == end:
             if rcvmsg[-2] == end[0] and rcvmsg[-1] == end[1] :
                 break        
         if verbose>1 : print(f'M2850A:_r(): ret_msg = {ret_msg}')
@@ -95,6 +99,7 @@ class MS2840A:
         if verbose>1 : print(f'M2850A:_wr(): command = {word}')
         self._w(word)
         r = self._r(decode=decode, verbose=verbose)
+        #if verbose>1 : print(f'M2850A:_wr(): r = {r}')
         if r is None :
             print(f'MS2840A:_wr(): Error! Failed to read for the command: "{word}"')
             print(f'MS2840A:_wr(): Error!  --> Exit')
@@ -107,31 +112,32 @@ class MS2840A:
         self._w('*WAI')
 
     def print_status(self):
-        print('Device identification =', self._wr('*IDN?'))
-        print('System Error =', self._wr('SYST:ERR?'))
-        print('Event Status =', self._wr('*ESR?'))
-        print('SYST:LANG =', self._wr('SYST:LANG?'))
-        print('INST =', self._wr('INST?'))
-        print('INST:SYST Signal Analyzer   =', self._wr('INST:SYST? SIGANA'))
-        print('INST:SYST Spectrum Analyzer =', self._wr('INST:SYST? SPECT'))
-        print('INST =', self._wr('INST?'))
+        print('MS2840A:pring_status(): Device identification =', self._wr('*IDN?'))
+        print('MS2840A:pring_status(): System Error =', self._wr('SYST:ERR?'))
+        print('MS2840A:pring_status(): Event Status =', self._wr('*ESR?'))
+        print('MS2840A:pring_status(): SYST:LANG =', self._wr('SYST:LANG?'))
+        print('MS2840A:pring_status(): INST =', self._wr('INST?'))
+        print('MS2840A:pring_status(): INST:SYST Signal Analyzer   =', self._wr('INST:SYST? SIGANA'))
+        print('MS2840A:pring_status(): INST:SYST Spectrum Analyzer =', self._wr('INST:SYST? SPECT'))
+        print('MS2840A:pring_status(): INST =', self._wr('INST?'))
+        print('MS2840A:pring_status(): Binary order =', self.binary_order)
         
     def print_error(self):
-        print('System Error =', self._wr('SYST:ERR?'))
+        print('MS2840A:pring_error(): System Error =', self._wr('SYST:ERR?'))
 
     def default_setting(self):
-        print()
-        print('*** Original status ***')
+        print('MS2840A:default_setting(): ')
+        print('MS2840A:default_setting(): *** Original status ***')
         self.print_status()
-        print()
-        print('*** Initialize settings')
+        print('MS2840A:default_setting(): ')
+        print('MS2840A:default_setting(): *** Initialize settings')
         self._w('*CLS') # clear
         self._w('*RST') # reset
         self._w('SYST:LANG SCPI')
-        print()
-        print('*** Current status ***')
+        print('MS2840A:default_setting(): ')
+        print('MS2840A:default_setting(): *** Current status ***')
         self.print_status()
-        print()
+        print('MS2840A:default_setting(): ')
         self.freq_mode = 'NORM'
         self.freqsynt_mode = 'NORM'
         self.is_att_auto = True
@@ -172,23 +178,27 @@ class MS2840A:
         # measure data
         self._single()
         data = []
+        data_bin = []
         if self._fftmode : 
             npoints = self.trace_points
             nread = math.ceil(npoints/5121.)
-            if verbose>0: print(f'npoints={npoints}')
+            if verbose>0: print(f'MS2840A:read_data(): npoints={npoints}')
             self._soc.settimeout(max(self.capt_time*self.trace_nAve*10, self.timeout))
             for i in range(nread):
                 start   = 5121*i
                 nremain = npoints - start
                 length  = 5121 if nremain>=5121 else nremain
                 _rawbin = self._wr(f'TRAC:DATA? {start},{length}', decode=False, verbose=verbose)
+                #if verbose>1: print(f'MS2840A:read_data(): _rawbin={_rawbin}')
                 _rawdata = self.decode_data(_rawbin, verbose)
-                data +=_rawdata
+                data_bin .append(_rawbin)
+                data     +=_rawdata
                 pass
             self._soc.settimeout(self.timeout)
         else       : 
             self._soc.settimeout(max(self.sweep_time*self.trace_nAve*10, self.timeout))
             _rawbin = self._wr('TRAC:DATA? TRAC1', decode=False, verbose=verbose)
+            data_bin=[_rawbin]
             data    = self.decode_data(_rawbin, verbose)
             self._soc.settimeout(self.timeout)
             pass
@@ -196,35 +206,36 @@ class MS2840A:
             return None
         data = np.array(data)
         if verbose>0:
-            print(f'frequency step  = {self.freq_step*1e-3} kHz')
-            print(f'RBW  = {self.band_wid*1e-3} kHz')
+            print(f'MS2840A:read_data(): frequency step  = {self.freq_step*1e-3} kHz')
+            print(f'MS2840A:read_data(): RBW  = {self.band_wid*1e-3} kHz')
             if self._fftmode :
-                print(f'capture time   = {self.capt_time} sec')
-                print(f'analysis time  = {self.ana_time} sec')
-                print(f'IQ data length = {self.measure_time} sec')
-                print(f'IQ data size   = {self.measure_size} points')
+                print(f'MS2840A:read_data(): capture time   = {self.capt_time} sec')
+                print(f'MS2840A:read_data(): analysis time  = {self.ana_time} sec')
+                print(f'MS2840A:read_data(): IQ data length = {self.measure_time} sec')
+                print(f'MS2840A:read_data(): IQ data size   = {self.measure_size} points')
             else :
                 pass
-            print(f'trace points   = {self.trace_points} points')
-            print(f'sampling rate  = {self.freq_samp} Hz')
-            print(f'data (size={len(data)}) = {data}')
-        return DATA(data, self.freq_start, self.freq_span, ut)
+            print(f'MS2840A:read_data(): trace points   = {self.trace_points} points')
+            print(f'MS2840A:read_data(): sampling rate  = {self.freq_samp} Hz')
+            print(f'MS2840A:read_data(): data (size={len(data)}) = {data}')
+            if verbose>1 : print(f'MS2840A:read_data(): bainary data (size={len(data_bin)}) = {data_bin}')
+        return DATA(data, self.freq_start, self.freq_span, ut, binary_data = data_bin)
 
     def print_fft_setting(self):
-        print()
-        print('*** fft settings ***')
-        print(f'frequency start = {self.freq_start*1e-9} GHz')
-        print(f'frequency stop  = {self.freq_stop*1e-9} GHz')
-        print(f'frequency span  = {self.freq_span*1e-3} kHz')
-        print(f'frequency step  = {self.freq_step*1e-3} kHz')
-        print(f'RBW  = {self.band_wid*1e-3} kHz')
-        print(f'capture time   = {self.capt_time} sec')
-        print(f'analysis time  = {self.ana_time} sec')
-        print(f'sampling rate  = {self.freq_samp*1e-3} kHz')
-        print(f'trace points   = {self.trace_points} points')
-        print(f'# of storage data = {self.trace_nAve} times (averaging {self.trace_nAve} times)')
-        print(f'detection mode = {self.det_mode}')
-        print(f'data format    = {self.data_format}')
+        print('MS2840A:print_fft_setting(): ')
+        print('MS2840A:print_fft_setting(): *** fft settings ***')
+        print(f'MS2840A:print_fft_setting(): frequency start = {self.freq_start*1e-9} GHz')
+        print(f'MS2840A:print_fft_setting(): frequency stop  = {self.freq_stop*1e-9} GHz')
+        print(f'MS2840A:print_fft_setting(): frequency span  = {self.freq_span*1e-3} kHz')
+        print(f'MS2840A:print_fft_setting(): frequency step  = {self.freq_step*1e-3} kHz')
+        print(f'MS2840A:print_fft_setting(): RBW  = {self.band_wid*1e-3} kHz')
+        print(f'MS2840A:print_fft_setting(): capture time   = {self.capt_time} sec')
+        print(f'MS2840A:print_fft_setting(): analysis time  = {self.ana_time} sec')
+        print(f'MS2840A:print_fft_setting(): sampling rate  = {self.freq_samp*1e-3} kHz')
+        print(f'MS2840A:print_fft_setting(): trace points   = {self.trace_points} points')
+        print(f'MS2840A:print_fft_setting(): # of storage data = {self.trace_nAve} times (averaging {self.trace_nAve} times)')
+        print(f'MS2840A:print_fft_setting(): detection mode = {self.det_mode}')
+        print(f'MS2840A:print_fft_setting(): data format    = {self.data_format}')
         self.print_error()
         print()
 
@@ -232,12 +243,12 @@ class MS2840A:
         self._fftmode = True
         self._w('INST SIGANA')
         if verbose>0 :
-            print()
-            print('*** fft_setting() ***')
-            print('Setup instrument to Signal Analyzer')
-            print('INST =', self._wr('INST?'))
-            print('INST:SYST SIGANA =', self._wr('INST:SYST? SIGANA'))
-            print()
+            print('MS2840A:fft_setting(): ')
+            print('MS2840A:fft_setting(): *** fft_setting() ***')
+            print('MS2840A:fft_setting(): Setup instrument to Signal Analyzer')
+            print('MS2840A:fft_setting(): INST =', self._wr('INST?'))
+            print('MS2840A:fft_setting(): INST:SYST SIGANA =', self._wr('INST:SYST? SIGANA'))
+            print('MS2840A:fft_setting(): ')
             pass
         # Standard setting
         self.is_capt_time_auto = True
@@ -280,34 +291,34 @@ class MS2840A:
 
 
     def print_sweep_setting(self):
-        print()
-        print('*** sweep settings ***')
-        print(f'frequency start = {self.freq_start*1e-9} GHz')
-        print(f'frequency stop  = {self.freq_stop*1e-9} GHz')
-        print(f'frequency span  = {self.freq_span*1e-3} kHz')
-        print(f'frequency step  = {self.freq_step*1e-3} kHz')
-        print(f'RBW  = {self.band_wid*1e-3} kHz')
-        print(f'VBW  = {self.video_wid*1e-3} kHz')
-        print(f'VBW mode    = {self.video_mode}')
-        print(f'sweep time  = {self.sweep_time} sec')
-        print(f'sweep type  = {self.sweep_type}')
-        print(f'trace points   = {self.trace_points} points')
-        print(f'# of storage data = {self.trace_nAve} times (averaging {self.trace_nAve} times)')
-        print(f'detection mode = {self.det_mode}')
-        print(f'data format    = {self.data_format}')
+        print('MS2840A:print_sweep_setting(): ')
+        print('MS2840A:print_sweep_setting(): *** sweep settings ***')
+        print(f'MS2840A:print_sweep_setting(): frequency start = {self.freq_start*1e-9} GHz')
+        print(f'MS2840A:print_sweep_setting(): frequency stop  = {self.freq_stop*1e-9} GHz')
+        print(f'MS2840A:print_sweep_setting(): frequency span  = {self.freq_span*1e-3} kHz')
+        print(f'MS2840A:print_sweep_setting(): frequency step  = {self.freq_step*1e-3} kHz')
+        print(f'MS2840A:print_sweep_setting(): RBW  = {self.band_wid*1e-3} kHz')
+        print(f'MS2840A:print_sweep_setting(): VBW  = {self.video_wid*1e-3} kHz')
+        print(f'MS2840A:print_sweep_setting(): VBW mode    = {self.video_mode}')
+        print(f'MS2840A:print_sweep_setting(): sweep time  = {self.sweep_time} sec')
+        print(f'MS2840A:print_sweep_setting(): sweep type  = {self.sweep_type}')
+        print(f'MS2840A:print_sweep_setting(): trace points   = {self.trace_points} points')
+        print(f'MS2840A:print_sweep_setting(): # of storage data = {self.trace_nAve} times (averaging {self.trace_nAve} times)')
+        print(f'MS2840A:print_sweep_setting(): detection mode = {self.det_mode}')
+        print(f'MS2840A:print_sweep_setting(): data format    = {self.data_format}')
         self.print_error()
-        print()
+        print('MS2840A:print_sweep_setting(): ')
 
     def sweep_setting(self, freq_start, freq_stop, rbw, time=None, step=None, nAve=1, verbose=0):
         self._fftmode = False
         self._w('INST SPECT')
         if verbose>0 :
-            print()
-            print('*** sweep_setting() ***')
-            print('Setup instrument to Spectrum Analyzer')
-            print('INST? =', self._wr('INST?'))
-            print('INST:SYST =', self._wr('INST:SYST? SPECT'))
-            print()
+            print('MS2840A:sweep_setting(): ')
+            print('MS2840A:sweep_setting(): *** sweep_setting() ***')
+            print('MS2840A:sweep_setting(): Setup instrument to Spectrum Analyzer')
+            print('MS2840A:sweep_setting(): INST? =', self._wr('INST?'))
+            print('MS2840A:sweep_setting(): INST:SYST =', self._wr('INST:SYST? SPECT'))
+            print('MS2840A:sweep_setting(): ')
             pass
         # Standard setting
         self._w('FREQ:OFFS 0') # frequency offset = 0 Hz
@@ -839,6 +850,7 @@ def main(mode='FFT',
         filename = _filename
         fdatapaths = np.array([ f'{todaydir}/data/{filename}_{i}.dat' for i in range(nResult) ] if nResult>1 else [f'{todaydir}/data/{filename}.dat'])
         pass
+    fbinpaths = np.array([ f'{todaydir}/data/{filename}_{i}.pkl' for i in range(nResult) ] if nResult>1 else [f'{todaydir}/data/{filename}.pkl'])
     fconfigpath = f'{todaydir}/data/{filename}.csv'
     ffigpath = f'{todaydir}/figure/{filename}.pdf'
 
@@ -861,6 +873,14 @@ def main(mode='FFT',
         for i in range(len(result.freq)):
             f.write(str(result.freq[i]) + " " + str(result.powDBm[i]) + "\n")
             pass
+        f.close()
+        pass
+    for result, fbinpath in zip(results, fbinpaths) :
+        f = open(fbinpath, 'wb')
+        pickle.dump(result.binary_data, f)
+        #for bin_data in bin_data_array:
+        #    f.write(bin_data+b'\n')
+        #    pass
         f.close()
         pass
 
