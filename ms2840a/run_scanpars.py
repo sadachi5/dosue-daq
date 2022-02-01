@@ -125,6 +125,7 @@ if __name__=='__main__':
     # Scan parameters
     modes = ['FFT'] # FFT or SWEEP
 
+    '''
     # For 2021/10/29 signal data taking
     outdir = '~/data/ms2840a/signal_data'
     freq_starts = np.arange(26400e+6 - 250e+3, 26500e+6 - 250e+3, 2e+6) # Hz
@@ -133,27 +134,52 @@ if __name__=='__main__':
     meas_times = [10] # sec
     nAves = [1] # times
     nRuns = [12] # times
-
-    # For test
     '''
-    outdir = '~/data/ms2840a/signal_data_test'
-    freq_starts = np.arange(26400e+6 - 250e+3, 26410e+6 - 250e+3, 2e+6) # Hz
-    freq_spans  = [2.5e+3] # kHz
-    rbws = [0.3] # kHz
-    meas_times = [1] # sec
-    nAves = [1] # times
-    nRuns = [2] # times
-    #'''
 
-    # freq_starts: Hz --> GHz
-    print(f'freq_stars [Hz]: {freq_starts}')
-    freq_starts = freq_starts *  1.e-9
-    print(f'freq_stars [GHz]: {freq_starts}')
+    check_freq = np.array([18190, 18336, 19120, 19186, 19440, 19478, 19766, 19794, 19818, 20006, 20296, 20302, 20490, 20540, 20892, 21442, 21808, 22522, 22672, 23306, 23808, 23934, 25328, 25352, 25860, 26274, 26346])
+    for base in check_freq:
+        #'''
+        # For 2021/11/29.30 12/02.03.06.07.08 signal data taking 
+        outdir = '~/data/ms2840a/signal_data_check'
+        freq_starts = np.arange(base*1e+6 - 250e+3, base*1e+6 - 250e+3 + 2e+6, 2e+6) # Hz 
+        freq_spans  = [2.5e+3] # kHz
+        rbws = [0.3] # kHz  
+        meas_times = [20] # sec
+        nAves = [1] # times
+        nRuns = [12] # times
+        #'''
+
+        #'''
+        # For 2021/11/29.30 12/02.03.06.07.08 Y-factor data taking
+        outdir = '~/data/ms2840a/yfactor_300K_fin_check'
+        freq_starts = np.arange(base*1e+6 - 250e+3, base*1e+6 - 250e+3 + 2e+6, 2e+6) # Hz
+        freq_spans  = [2.5e+3] # kHz
+        rbws = [0.3] # kHz
+        meas_times = [1] # sec
+        nAves = [1] # times
+        nRuns = [1] # times
+        #'''
+    
+        # For test
+        '''
+        outdir = '~/data/ms2840a/signal_data_test'
+        freq_starts = np.arange(26400e+6 - 250e+3, 26410e+6 - 250e+3, 2e+6) # Hz
+        freq_spans  = [2.5e+3] # kHz
+        rbws = [0.3] # kHz
+        meas_times = [1] # sec
+        nAves = [1] # times
+        nRuns = [2] # times
+        '''
+
+        # freq_starts: Hz --> GHz
+        print(f'freq_stars [Hz]: {freq_starts}')
+        freq_starts = freq_starts *  1.e-9
+        print(f'freq_stars [GHz]: {freq_starts}')
 
 
-    configs = np.array(create_configs(modes, freq_starts, freq_spans, rbws, meas_times, nAves, nRuns))
+        configs = np.array(create_configs(modes, freq_starts, freq_spans, rbws, meas_times, nAves, nRuns))
 
-    print(f'configs (size={len(configs)}):')
-    print(configs)
-    if run: run_scanpars(configs, noplot=noplot, overwrite=overwrite, shortconfig=shortconfig, filename_prefix=filename_prefix, outdir=outdir)
-    pass
+        print(f'configs (size={len(configs)}):')
+        print(configs)
+        if run: run_scanpars(configs, noplot=noplot, overwrite=overwrite, shortconfig=shortconfig, filename_prefix=filename_prefix, outdir=outdir)
+        pass

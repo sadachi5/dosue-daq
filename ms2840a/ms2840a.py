@@ -973,7 +973,7 @@ if __name__ == '__main__':
     filename_add_suffix = False
     ## 
     mode = 'SWEEP' # SWEEP or FFT
-    freq_start = 16  #GHz
+    freq_start = 18  #GHz
     freq_span  = 10.5e+6 #kHz
     rbw        = 1000 #kHz
     meas_time  = None # sec (FFT: measurement time / SWEE: sweep time)

@@ -18,5 +18,6 @@ aho*
 *.dat
 *.npz
 *.out
-
+\#*
+output/
 
