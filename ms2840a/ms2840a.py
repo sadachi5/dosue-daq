@@ -725,10 +725,11 @@ def main(mode='FFT',
         nAve       = 10, # times (number of average for each data)
         nRun       = 10, # times (number of run or saved data)
         outdir='~/data/ms2840a', noplot=False, overwrite=False, shortconfig=False,
+        ip_address = IP_ADDRESS,
         filename=None, filename_add_suffix=True, verbose=0):
 
     # Initialize connection
-    ms = MS2840A()
+    ms = MS2840A(host_ip = ip_address)
     ms.connect()
 
     # Initialize variables
@@ -992,6 +993,7 @@ if __name__ == '__main__':
     parser.add_argument('--noplot', default=False, action='store_true', help=f'Not create plots (default: False)')
     parser.add_argument('--overwrite', default=False, action='store_true', help=f'Overwrite the output files even if there is the same filename data (default: False)')
     parser.add_argument('--shortconfig', default=False, action='store_true', help=f'Output csv file has short configuration info. (default: False)')
+    parser.add_argument('-i', '--ip_address', default=IP_ADDRESS, help=f'IP address of the Anritsu MS2840A signal analyzer (default: {IP_ADDRESS})')
     parser.add_argument('-f', '--filename', default=filename, help=f'Output filename. If it is None, filename will be asked after measurements. (default: {filename})')
     parser.add_argument('--filename_add_suffix', default=filename_add_suffix, help=f'Add suffix on output filename (default: {filename_add_suffix})')
     parser.add_argument('-v', '--verbose', dest='verbose', default=0, type=int, help=f'Print out verbosity (default: 0)')
@@ -1009,6 +1011,7 @@ if __name__ == '__main__':
         noplot     = args.noplot,
         overwrite  = args.overwrite,
         shortconfig= args.shortconfig,
+        ip_address = args.ip_address,
         filename   = args.filename,
         filename_add_suffix = args.filename_add_suffix,
         verbose    = args.verbose)

@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import os
 import datetime
 import pathlib
+import argparse
+
 
 IP_ADDRESS = '192.168.215.113'
 PORT = 5025
@@ -187,22 +189,30 @@ class N9010A:
     def npoints(self, n:int):
         self._w(f'SWE:POIN {n}')
     
-def main(outdir='~/data/n9010a'):
-    spa = N9010A()
+def main(outdir='~/data/n9010a', 
+         start = 19.999995, #GHz
+         stop = 20.000005, #GHz
+         rbw = 300, # Hz
+         npoints = 0, # points
+         nAve = 1, # counts
+         overwrite = False, # do overwrite or not
+         ip_address = IP_ADDRESS,
+         filename=None):
+    spa = N9010A(host_ip=ip_address)
     spa.connect()
 
-    spa.freq_start = 19.999995 #GHz
+    spa.freq_start = start #GHz
     print(f'Start freq: {spa.freq_start} GHz')
-    spa.freq_stop = 20.000005 #GHz
+    spa.freq_stop = stop #GHz
     print(f'Stop freq : {spa.freq_stop} GHz')
-    spa.npoints = 10001 #points
+    spa.npoints = npoints #points
     print(f'npoints : {spa.npoints}')
-    spa.band = 300 #Hz
+    spa.band = rbw #Hz
     print(f'Band Width : {spa.band} Hz')
     
     print(f'Sweep Time : {spa.time} s')
     
-    spa.aver_coun = 1
+    spa.aver_coun = nAve
     print(f'Average Count : {spa.aver_coun}')
 
     
@@ -232,7 +242,9 @@ def main(outdir='~/data/n9010a'):
         pass
 
     # make new file                                                           
-    filename = input("filename ? : ")
+    if filename is None:
+        filename = input("filename ? : ")
+        pass
     fpath = "data/" + today + "/data/" + filename + ".dat"
     if filename=='':
         print(f'Do NOT save the data!')
@@ -242,7 +254,8 @@ def main(outdir='~/data/n9010a'):
         return 0
     fdatapath = f'{todaydir}/data/{filename}.dat'
     if os.path.exists(fdatapath):
-        _filename = input("other : ")
+        if overwrite: _filename = filename;
+        else        : _filename = input("other : ")
         if _filename == filename: print(f'Warning! The output file ({filename}.dat) is overwriten!')
         filename = _filename
         fdatapath = f'{todaydir}/data/{filename}.dat'
@@ -271,5 +284,37 @@ def main(outdir='~/data/n9010a'):
 
 
 if __name__ == '__main__':
+
     outdir='~/data/n9010a'
-    main(outdir)
+    filename=None
+
+    freq_start = 19.99995
+    freq_span  = 10.
+    rbw = 300.
+    npoints = 10001
+    nAve = 1
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', '--fstart', dest='freq_start', type=float, default=freq_start, help=f'Start Frequency [GHz] (default: {freq_start})')
+    parser.add_argument('-w', '--fspan', dest='freq_span', type=float, default=freq_span, help=f'Frequency Span [kHz] (default: {freq_span})')
+    parser.add_argument('-r', '--rbw', dest='rbw', type=float, default=rbw, help=f'Resolution Band-Width (RBW) [kHz] (default: {rbw})')
+    parser.add_argument('-p', '--npoints', dest='npoints', default=npoints, type=int, help=f'Number of frequency points (default: {npoints} points)')
+    parser.add_argument('-n', '--nAve', dest='nAve', default=nAve, type=int, help=f'Number of measurement counts which will be averaged (default: {nAve} times)')
+    parser.add_argument('-o', '--outdir', default=outdir, help=f'Output directory name (default: {outdir})')
+    parser.add_argument('--overwrite', default=False, action='store_true', help=f'Overwrite the output files even if there is the same filename data (default: False)')
+    parser.add_argument('-i', '--ip_address', default=IP_ADDRESS, help=f'IP address of the Anritsu MS2840A signal analyzer (default: {IP_ADDRESS})')
+    parser.add_argument('-f', '--filename', default=filename, help=f'Output filename. If it is None, filename will be asked after measurements. (default: {filename})')
+    args = parser.parse_args()
+
+
+    main(outdir=args.outdir, 
+         start = args.freq_start, #GHz
+         stop = args.freq_start + args.freq_span*1.e-6, #GHz
+         rbw = args.rbw, # Hz
+         npoints = args.npoints, # points
+         nAve = args.nAve, # counts
+         overwrite = args.overwrite, # do overwrite or not
+         ip_address = args.ip_address,
+         filename = args.filename);
+
+    pass;
