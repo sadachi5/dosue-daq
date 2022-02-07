@@ -342,7 +342,7 @@ class MS2840A:
         self.freq_start = freq_start # [GHz]
         self.freq_stop  = freq_stop # [GHz]
         self.det_mode = 'RMS' # NORM, POS, NEG, SAMP, RMS
-        self.trace_points = (int)((self.freq_stop-self.freq_start)/self.band_wid) + 1
+        self.trace_points = (int)((self.freq_stop-self.freq_start)/self.band_wid)*10 + 1
         self.trace_nAve = nAve
         self._wait()
 
@@ -930,7 +930,9 @@ def main(mode='FFT',
         dutyratio = eff_time/run_time;
         f.write(f'duty-ratio, {dutyratio}, \n')
         f.write(f'duty-ratio*span, {dutyratio*(ms.freq_span*1.e-6)}, MHz\n')
-        f.write(f'span/duty-ratio, {(ms.freq_span*1.e-6)/dutyratio}, MHz\n')
+        if dutyratio > 0.: 
+            f.write(f'span/duty-ratio, {(ms.freq_span*1.e-6)/dutyratio}, MHz\n')
+            pass
  
         # Calculate data statistics
         mins  = [ np.min(result.amp) for result in results ] # [W]

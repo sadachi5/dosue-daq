@@ -9,11 +9,13 @@ import os
 import datetime
 import pathlib
 import argparse
+import struct
 
 
 IP_ADDRESS = '192.168.215.113'
 PORT = 5025
-outt = 120
+outt = 300
+DATA_FORMAT='REAL,64' # 'REAL,64'
 
 class spa_data:
     def __init__(self, freq, powDBm, MesTimePoint):
@@ -27,7 +29,7 @@ class spa_data:
 
     @property
     def amp(self):
-        return np.power(10, self._powDBm/10)/1000
+        return np.power(10., self._powDBm/10.)/1000.
 
     @property
     def freq(self):
@@ -39,12 +41,14 @@ class spa_data:
 
 
 class N9010A:
-    def __init__(self, host_ip=IP_ADDRESS, port=PORT):
+    # sweep_mode = 'SWEEP' or 'FFT'
+    def __init__(self, host_ip=IP_ADDRESS, port=PORT, sweep_mode='SWEEP'):
         self._soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._host_ip = host_ip
         self._port = port
         self._connected = False
         self._outtime = outt
+        self._sweep_mode = sweep_mode
 
     def __del__(self):
         if self._connected:
@@ -54,27 +58,55 @@ class N9010A:
         word += '\r\n'
         self._soc.send(word.encode())
 
-    def _r(self):
-        ret_msg = ''
+    def _r(self, decode=True):
+        if decode:
+            ret_msg = ''
+            end = '\n'
+        else:
+            ret_msg = b''
+            end = b'\n'
+            pass
         self._soc.settimeout(self.outtime)
         while True:
-            rcvmsg = self._soc.recv(1024).decode()
+            rcvmsg = self._soc.recv(1024)
+            if decode:
+                rcvmsg = rcvmsg.decode()
+                pass
             ret_msg += rcvmsg
-            if rcvmsg[-1] == '\n':
+            if rcvmsg[-1:] == end:
                 break        
         return ret_msg.strip()
 
-    def _wr(self, word):
+    def _wr(self, word, decode=True):
         self._w(word)
-        return self._r() 
+        return self._r(decode=decode) 
 
     def connect(self):
         if self._connected:
             raise Exception("Already connected.")
         self._soc.connect((self._host_ip, self._port))
         self._w('*CLS')
-        #self._w('*RST')
+        self._w('*RST')
         self._w('*WAI')
+        self._w('INIT:CONT OFF')
+        self._w('INIT:SAN')
+        if self._sweep_mode == 'SWEEP':
+            self._w('SWE:TYPE SWE')
+        elif self._sweep_mode == 'FFT':
+            self._w('SWE:TYPE FFT')
+        else:
+            print('N9010A:connect(): ERROR! There is no sweep mode of "{self._sweep_type}"!')
+            print('N9010A:connect(): ERROR! sweep mode is only "SWEEP" or "FFT".')
+        self._w(f'FORM {DATA_FORMAT}') # 32bit binary (float)
+        if DATA_FORMAT == 'REAL,32':
+            binary_size = 8
+            binary_format = 'f'
+        elif DATA_FORMAT == 'REAL,64':
+            binary_size = 16
+            binary_format = 'd'
+        else:
+            print('N9010A:connect(): ERROR! There is no data format of "{DATA_FORMAT}"!')
+            pass
         self._soc.settimeout(10)
 
     def close(self):
@@ -82,10 +114,31 @@ class N9010A:
             self._soc.close()
             self._connected = False
 
+    def decode_data(self, rawbin, verbose=0):
+        nchar = (int)(rawbin[1:2].decode())
+        if verbose>1: print(f'N9010A:decode_data(): nchar = {nchar}')
+        nbinary = (int)((int)(rawbin[2:2+nchar].decode())/8)
+        if DATA_FORMAT == 'REAL,32':
+            unpack_format = '>'+'f'*nbinary
+        elif DATA_FORMAT == 'REAL,64':
+            unpack_format = '>'+'d'*nbinary
+        else:
+            print('N9010A:decode_data(): ERROR! There is no data format of "{DATA_FORMAT}"!')
+            pass
+        data = struct.unpack(unpack_format, rawbin[2+nchar:])
+        if verbose>1: 
+            print(f'N9010A:decode_data(): nbinary = {nbinary}')
+            print(f'N9010A:decode_data(): binary data length = {len(rawbin[2+nchar:])}')
+            print(f'N9010A:decode_data(): unpack format = {unpack_format}')
+            print(f'N9010A:decode_data(): data = {data}')
+            pass
+        return data
+
     def read_data(self) -> spa_data:
         ut = time.time()
-        rawstr = self._wr('READ:SAN?')
-        data = np.array([float(ns) for ns in rawstr.split(',')])
+        rawstr = self._wr('READ:SAN?', decode=False)
+        rawstr = self.decode_data(rawstr)
+        data = np.array([float(ns) for ns in rawstr])
         return spa_data(data[::2], data[1::2], ut)
 
     def cps_on(self):
@@ -188,8 +241,20 @@ class N9010A:
     @npoints.setter
     def npoints(self, n:int):
         self._w(f'SWE:POIN {n}')
+
+    @property
+    def det_mode(self) -> str:
+        # NORMal, AVERage, POSitive, SAMPle, NEGative, QPEak, EAVerage, RAVerage
+        return str(self._wr('DET?'))
+
+    @det_mode.setter
+    def det_mode(self, mode:str):
+        #self._w(f'TRAC:TYPE {mode}')
+        self._w(f'DET {mode}')
+ 
     
 def main(outdir='~/data/n9010a', 
+         mode = 'SWEEP',
          start = 19.999995, #GHz
          stop = 20.000005, #GHz
          rbw = 300, # Hz
@@ -198,7 +263,7 @@ def main(outdir='~/data/n9010a',
          overwrite = False, # do overwrite or not
          ip_address = IP_ADDRESS,
          filename=None):
-    spa = N9010A(host_ip=ip_address)
+    spa = N9010A(host_ip = ip_address, sweep_mode = mode)
     spa.connect()
 
     spa.freq_start = start #GHz
@@ -215,13 +280,17 @@ def main(outdir='~/data/n9010a',
     spa.aver_coun = nAve
     print(f'Average Count : {spa.aver_coun}')
 
+    spa.det_mode = 'AVERage'
+    #spa.det_mode = 'NORM'
+    print(f'Detection Mode : {spa.det_mode}')
+
     
     start_time = time.time()
     result = spa.read_data()
     stop_time = time.time()
     print(f'Elapsed time for read_data() = {stop_time-start_time} sec')
     fig, ax = plt.subplots()
-    ax.plot(result.freq/1e9, result.powDBm)
+    ax.plot(result.freq/1.e9, result.powDBm)
     ax.set_xlabel('Freq [GHz]')
     ax.set_ylabel('dBm')
     ax.grid()
@@ -275,7 +344,8 @@ def main(outdir='~/data/n9010a',
     f.write("#count = " + str(spa.aver_coun) + "\n")
     f.write("#Frequency[Hz] Power[dBm]" + "\n")
     for i in range(len(result.freq)):
-        f.write(str(result.freq[i]) + " " + str(result.powDBm[i]) + "\n")
+        line = '{:f} {}'.format(result.freq[i], result.powDBm[i]) + "\n"
+        f.write(line)
         pass
     f.close()
 
@@ -288,6 +358,7 @@ if __name__ == '__main__':
     outdir='~/data/n9010a'
     filename=None
 
+    mode = 'SWEEP' # or 'FFT'
     freq_start = 19.99995
     freq_span  = 10.
     rbw = 300.
@@ -295,9 +366,10 @@ if __name__ == '__main__':
     nAve = 1
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('-m', '--mode', dest='mode', type=str, default=mode, help=f'Sweep mode [SWEEP or FFT] (default: {mode})')
     parser.add_argument('-s', '--fstart', dest='freq_start', type=float, default=freq_start, help=f'Start Frequency [GHz] (default: {freq_start})')
     parser.add_argument('-w', '--fspan', dest='freq_span', type=float, default=freq_span, help=f'Frequency Span [kHz] (default: {freq_span})')
-    parser.add_argument('-r', '--rbw', dest='rbw', type=float, default=rbw, help=f'Resolution Band-Width (RBW) [kHz] (default: {rbw})')
+    parser.add_argument('-r', '--rbw', dest='rbw', type=float, default=rbw, help=f'Resolution Band-Width (RBW) [Hz] (default: {rbw})')
     parser.add_argument('-p', '--npoints', dest='npoints', default=npoints, type=int, help=f'Number of frequency points (default: {npoints} points)')
     parser.add_argument('-n', '--nAve', dest='nAve', default=nAve, type=int, help=f'Number of measurement counts which will be averaged (default: {nAve} times)')
     parser.add_argument('-o', '--outdir', default=outdir, help=f'Output directory name (default: {outdir})')
@@ -307,7 +379,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
 
-    main(outdir=args.outdir, 
+    main(outdir = args.outdir, 
+         mode = args.mode,
          start = args.freq_start, #GHz
          stop = args.freq_start + args.freq_span*1.e-6, #GHz
          rbw = args.rbw, # Hz
