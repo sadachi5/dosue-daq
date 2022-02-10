@@ -6,6 +6,9 @@ import argparse
 class Actuator:
     """
     The Actuator object is for writing commands and reading stats of the actuator via serial communication.
+
+    NOTE: The user must have permission to control the devfile (e.g. /dev/ttyUSB0).
+          If the group of devfile is "dialout", you should add your user account to group "dialout".
     """
 
     def __init__(self, devfile='/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_AB0KPFJJ-if00-port0', sleep=0.10, verbose=0):
