@@ -271,7 +271,7 @@ printstatus(ser)
 printstatus(ser)
 #sendCommand(ser, '$J=G91 F1000 X10', verbose=1)
 #sendCommand(ser, 'G91 G1 F1000 X-10', verbose=1)
-sendCommand(ser, 'G91 G1 F500 Y5', verbose=1)
+sendCommand(ser, 'G91 G1 F500 Y10', verbose=1)
 waitIdle(ser);
 printstatus(ser)
 

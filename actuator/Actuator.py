@@ -22,8 +22,8 @@ class Actuator:
         self.Fmax =2000
         self.Fmin =   0
 
-        self.Xmin = -1000.
-        self.Xmax = 1000.
+        self.Xmin = -700.
+        self.Xmax = 700.
         self.Ymin = -1000.
         self.Ymax = 1000.
 
@@ -248,7 +248,20 @@ class Actuator:
 
     # Homing
     def homing(self) :
-        # TODO: implementation
+        self.__print('Actuator:homing() : Move to (-x, -y) direction until limit switches turn ON')
+        self.__sendCommand('$H')
+        time.sleep(5)
+        self.ser.flushInput()
+        time.sleep(2)
+        res = self.__readAll() # this is necessary to work correctly.
+        self.__print(f'Actuator:homing() : response = {res}')
+        """
+        ret, mgs = self.waitIdle()
+        if not ret:
+            msg = 'Actuator:homing() : Failed to waitIdle()'
+            print(msg)
+            return False, msg
+        """
         return True, 'Actuator:homing() : Successfully homing!'
 
     ######################
@@ -395,6 +408,11 @@ class Actuator:
     def __setActuatorParameters(self) :
         self.__sendCommand('$10=0') # Show 0: Work Position (WPos) / 1: Machine Position (MPos)
         self.__sendCommand('$21=0'); # hard limit switch OFF
+        self.__sendCommand('$22=1'); # homing enable
+        self.__sendCommand('$23=7'); # homing direction (-x,-y,-z)
+        self.__sendCommand('$24=100'); # slow speed for homing
+        self.__sendCommand('$25=1000'); # fast speed for homing
+        self.__sendCommand('$27=10'); # back distance for homing
         self.__sendCommand('$100=16.665') # step/mm X-axis (MISUMI GPA24GT3060-A-P8)
         self.__sendCommand('$101=26.667') # step/mm Y-axis (openbuilds 3GT Timing Pulley 20 Tooth)
         self.__sendCommand('$102=26.667') # step/mm Z-axis (not used) (blackbox original)
@@ -432,7 +450,7 @@ if __name__ == '__main__':
     act = Actuator(args.devfile, args.sleep, args.verbose)
 
     # Homing (NOTE: This is required to know the correct position.)
-    #act.homing()
+    act.homing()
 
     # Move to (x,y)
     if args.x is not None or args.y is not None:
