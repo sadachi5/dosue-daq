@@ -395,7 +395,7 @@ class Actuator:
     def __setActuatorParameters(self) :
         self.__sendCommand('$10=0') # Show 0: Work Position (WPos) / 1: Machine Position (MPos)
         self.__sendCommand('$21=0'); # hard limit switch OFF
-        self.__sendCommand('$100=22.920') # step/mm X-axis (MISUMI GPA24GT3060-A-P8)
+        self.__sendCommand('$100=16.665') # step/mm X-axis (MISUMI GPA24GT3060-A-P8)
         self.__sendCommand('$101=26.667') # step/mm Y-axis (openbuilds 3GT Timing Pulley 20 Tooth)
         self.__sendCommand('$102=26.667') # step/mm Z-axis (not used) (blackbox original)
         self.__sendCommand('$110={}'.format(self.Fmax)) # speed [mm/min] X-axis 
