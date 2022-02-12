@@ -22,9 +22,9 @@ class Actuator:
         self.Fmax =2000
         self.Fmin =   0
 
-        self.Xmin = -700.
+        self.Xmin = 0.
         self.Xmax = 700.
-        self.Ymin = -1000.
+        self.Ymin = 0.
         self.Ymax = 1000.
 
         # Open serial communication
@@ -78,33 +78,68 @@ class Actuator:
             return False, msg
         speed = int(speedrate * (self.Fmax-self.Fmin) + self.Fmin)
         # G90: Position move / G91: Diff. move
+        moveAxis = []
         if x is not None and y is None:
             cmd  = '$J=G90 F{:d} X{}'.format(speed, x) 
+            moveAxis = [0]
         elif y is not None and x is None:
             cmd  = '$J=G90 F{:d} Y{}'.format(speed, y) 
+            moveAxis = [1, 2]
         elif x is not None and y is not None:
             cmd  = '$J=G90 F{:d} X{} Y{}'.format(speed, x, y) 
+            moveAxis = [0, 1, 2]
         else:
             msg = 'Actuator:move() : Warning! There is no target X or Y position.\n'\
                   'Actuator:move() : Warning! --> Do NOT move!'
             return False, msg
+        # Get current position
+        tmp, tmp2 = self.getPosition()
+        if len(tmp2) == 3 :
+            x_now, y_now, z_now = tmp2
+        else:
+            msg = "Actuator:move() : ERROR! Failed to get the current position!"
+            print(msg)
+            return False, msg
+        # Get current status
+        ret, status, limitswitch = self.getStatus()
+        initial_limitswitch = False
+        for axis in moveAxis:
+            if limitswitch[axis] :
+                initial_limitswitch = True
+                break
+            pass
+        self.__print(f'Actuator:move() : initial limitswitch = {initial_limitswitch}')
+        if initial_limitswitch and (x <= x_now or y <= y_now):
+            msg = f'Actuator:move() : WARMING! Initial limitswitch is ON.'\
+                  f'--> Do NOT move!\n'\
+                  f'Actuator:move() : current (x, y) = ({x_now}, {y_now})\n'\
+                  f'Actuator:move() : target  (x, y) = ({x}, {y})\n'\
+                  f'Actuator:move() : limitswitch (x, y1, y2) = '\
+                  f'({limitswitch[0]}, {limitswitch[1]}, {limitswitch[2]})'
+            print(msg)
+            return False, msg
+        # Move
         self.__print(f'Actuator:move() : Move to ({x},{y})')
         ret = self.__sendCommand(cmd)
         if not ret :
             msg = 'Actuator:move() : ERROR in __sendCommand(command = {})'.format(cmd)
             return False, msg
         self.__print(f'Actuator:move() : Send command = "{cmd}"')
-        ret, mgs = self.waitIdle()
+        if initial_limitswitch:
+            time.sleep(2)
+            pass
+        ret, msg = self.waitIdle(moveAxis=moveAxis)
         if not ret:
-            msg = 'Actuator:move() : Failed to waitIdle()'
+            msg = 'Actuator:move() : WARNING! in waitIdle() --> hold()'
             print(msg)
+            self.hold()
             return False, msg
         msg = self.__print('Actuator:move() : Successfully finished!')
         return True, msg
 
     # moveDiff
     # move by (dx,dy)
-    def moveDiff(self, dx=0., dy=0., speedrate=0.1) :
+    def moveDiff(self, dx=0., dy=0., speedrate=0.1, nolimit=False) :
         if speedrate < 0. or speedrate > 1. :
             print("Actuator:moveDiff() : WARNING! Speedrate should be between 0 and 1.")
             print("Actuator:moveDiff() : WARNING! Speedrate is sed to 0.1.")
@@ -119,29 +154,62 @@ class Actuator:
             return False, msg
         x_next = x_now + dx
         y_next = y_now + dy
-        if (self.Xmin > x_next) or (self.Xmax < x_next) :
-            print("Actuator:moveDiff() : ERROR! Next X position (={}) is not valid range ({}--{}). (dx = {})".format(x_next, self.Xmin, self.Xmax, dx))
-            print("Actuator:moveDiff() : ERROR! --> Do NOT move!")
-            msg = 'Actuator:moveDiff() : Failed to move due to being out of range in X position'
-            return False, msg
-        if (self.Ymin > y_next) or (self.Ymax < y_next) :
-            print("Actuator:moveDiff() : ERROR! Next Y position (={}) is not valid range ({}--{}). (dy = {})".format(y_next, self.Ymin, self.Ymax, dy))
-            print("Actuator:moveDiff() : ERROR! --> Do NOT move!")
-            msg = 'Actuator:moveDiff() : Failed to move due to being out of range in Y position'
-            return False, msg
+        if not nolimit:
+            if (self.Xmin > x_next) or (self.Xmax < x_next) :
+                print("Actuator:moveDiff() : ERROR! Next X position (={}) is not valid range ({}--{}). (dx = {})".format(x_next, self.Xmin, self.Xmax, dx))
+                print("Actuator:moveDiff() : ERROR! --> Do NOT move!")
+                msg = 'Actuator:moveDiff() : Failed to move due to being out of range in X position'
+                return False, msg
+            if (self.Ymin > y_next) or (self.Ymax < y_next) :
+                print("Actuator:moveDiff() : ERROR! Next Y position (={}) is not valid range ({}--{}). (dy = {})".format(y_next, self.Ymin, self.Ymax, dy))
+                print("Actuator:moveDiff() : ERROR! --> Do NOT move!")
+                msg = 'Actuator:moveDiff() : Failed to move due to being out of range in Y position'
+                return False, msg
+            pass
         speed = int(speedrate * (self.Fmax-self.Fmin) + self.Fmin)
+        moveAxis = []
+        if dx != 0.:
+            moveAxis.append(0)
+            pass
+        if dy != 0.:
+            moveAxis.append(1)
+            moveAxis.append(2)
+            pass
+        # Get current status
+        ret, status, limitswitch = self.getStatus()
+        initial_limitswitch = False
+        for axis in moveAxis:
+            if limitswitch[axis] :
+                initial_limitswitch = True
+                break
+            pass
+        self.__print(f'Actuator:moveDiff() : initial limitswitch = {initial_limitswitch}')
+        if initial_limitswitch and (dx < 0. or dy < 0.):
+            msg = f'Actuator:moveDiff() : WARNING! Initial limitswitch is ON.'\
+                  f'--> Do NOT move!\n'\
+                  f'Actuator:moveDiff() : (dx, dy) = ({dx}, {dy})\n'\
+                  f'Actuator:moveDiff() : limitswitch (x, y1, y2) = '\
+                  f'({limitswitch[0]}, {limitswitch[1]}, {limitswitch[2]})'
+            print(msg)
+            return False, msg
+        # Move
         # G90: Position move / G91: Diff. move
         cmd  = '$J=G91 F{:d} X{} Y{}'.format(speed, dx, dy)
-        self.__print(f'Actuator:move() : Move by ({dx},{dy})')
+        self.__print(f'Actuator:moveDiff() : Move by ({dx},{dy})')
         ret = self.__sendCommand(cmd)
         if not ret :
-            msg = 'Actuator:moveDiff() : ERROR in __sendCommand(command = {})'.format(cmd)
+            msg = 'Actuator:moveDiff() : ERROR! in __sendCommand(command = {})'.format(cmd)
+            print(msg)
             return False, msg
         self.__print(f'Actuator:moveDiff() : Send command = "{cmd}"')
-        ret, msg = self.waitIdle()
+        if initial_limitswitch:
+            time.sleep(2)
+            pass
+        ret, msg = self.waitIdle(moveAxis=moveAxis)
         if not ret:
-            msg = 'Actuator:moveDiff() : Failed to waitIdle()'
+            msg = 'Actuator:moveDiff() : WARNING! in waitIdle() --> hold()'
             print(msg)
+            self.hold()
             return False, msg
         msg = self.__print('Actuator:moveDiff() : Successfully finished!')
         return True, msg
@@ -151,7 +219,22 @@ class Actuator:
         res = self.__getresponse('?', doSleep).replace('\r','').replace('\n','/').strip()
         self.__print('Actuator:getStatus() : response to \"?\" = \"{}\"'.format(res), 1)
         status = (res.split('<')[-1].split('>')[0]).split('|')[0].split(':')[0]
+        limitswitch = [False, False, False] # X, Y, Z
+        if "Pn" in res:
+            ls_status = (res.split('<')[-1].split('>')[0]).split('|')[3].split(':')[1]
+            if 'X' in ls_status:
+                limitswitch[0] = True
+                pass
+            if 'Y' in ls_status:
+                limitswitch[1] = True
+                pass
+            if 'Z' in ls_status:
+                limitswitch[2] = True
+                pass
+            pass
         self.__print('Actuator:getStatus() : status = "{}"'.format(status), 1)
+        self.__print(f'Actuator:moveDiff() : limitswitch (x, y1, y2) = '
+                     f'({limitswitch[0]}, {limitswitch[1]}, {limitswitch[2]})', 1)
         if len(status)==0 :
             print('Actuator:getStatus() : ERROR! Could not get status!')
             print('Actuator:getStatus() : --> Stop the actuator!')
@@ -163,9 +246,9 @@ class Actuator:
             if len(status)==0 :
                 msg = 'Actuator:getStatus() : ERROR! Could not get status again!'
                 print(msg)
-                return False, msg
-            return True, status
-        return True, status
+                return False, msg, limitswitch
+            return True, status, limitswitch
+        return True, status, limitswitch
 
     # get position: return (x,y,z)
     def getPosition(self, doSleep=True) :
@@ -182,36 +265,68 @@ class Actuator:
         self.__print('Actuator:getPosition() : postion = ({},{},{})'.format(x,y,z))
         return True, (x,y,z)
 
+    # get position & status
+    def getPositionStatus(self, doSleep=True, doPrint=True):
+        ret, xyz = act.getPosition()
+        ret2, status, limitswitch = act.getStatus()
+        self.__print(f'Current Position (x,y,z) = ({xyz[0]},{xyz[1]},{xyz[2]})', -1 if doPrint else 0)
+        self.__print(f'Current Status = {status}')
+        self.__print(f'Current Limit Switch (x,y1,y2) = '
+                     f'({limitswitch[0]}, {limitswitch[1]}, {limitswitch[2]})', -1 if doPrint else 0)
+        return ret and ret2, xyz, status, limitswitch 
+
     # status==Idle
-    def isIdle(self, doSleep=True):
-        ret, status = self.getStatus(doSleep)
+    # moveAxis: 0:X-axis, 1:Y1-axis, 2:Y2-axis
+    def isIdle(self, doSleep=True, moveAxis=[]):
+        ret, status, limitswitch = self.getStatus(doSleep)
+        ls_stop = False
+        for axis in moveAxis:
+            if limitswitch[axis]:
+                ls_stop = True
+                break
+            pass
         if not ret :
             msg = 'Actuator:isIdle() : ERROR! Could not get status!'
             print(msg)
-            return None, msg
+            return None, ls_stop, msg
         if  status == 'Idle':
             msg = self.__print('Actuator:isIdle() : True', 1)
-            return True, msg 
+            return True, ls_stop, msg 
         else:
             msg = self.__print('Actuator:isIdle() : False', 1)
-            return False, msg
+            return False, ls_stop, msg
     
     # status==Jog or Run
-    def isRun(self, doSleep=True):
-        ret, status = self.getStatus(doSleep)
-        if not ret : return None, 'Actuator:isRun() : ERROR! Could not get status!'
-        if status in ['Jog', 'Run'] : return True , 'Actuator:isRun() :'
-        else                        : return False, 'Actuator:isRun() :'
+    # moveAxis: 0:X-axis, 1:Y1-axis, 2:Y2-axis
+    def isRun(self, doSleep=True, moveAxis=[]):
+        ret, status, limitswitch = self.getStatus(doSleep)
+        ls_stop = False
+        for axis in moveAxis:
+            if limitswitch[axis]:
+                ls_stop = True
+                break
+            pass
+        if not ret :
+            return None, ls_stop, 'Actuator:isRun() : ERROR! Could not get status!'
+        if status in ['Jog', 'Run'] :
+            return True, ls_stop, 'Actuator:isRun() :'
+        else: 
+            return False, ls_stop, 'Actuator:isRun() :'
 
     # Wait for end of moving (until Idle status)
     # max_loop_time : maximum waiting time [sec]
-    def waitIdle(self, max_loop_time = 180) :
+    # moveAxis: 0:X-axis, 1:Y1-axis, 2:Y2-axis
+    def waitIdle(self, max_loop_time = 180, moveAxis=[]):
         max_loop = int(max_loop_time/self.sleep) # # of loop for  max_loop_time [sec]
         for i in range(max_loop):
-            isIdle, msg = self.isIdle()
+            isIdle, ls_stop, msg = self.isIdle(moveAxis=moveAxis)
             if isIdle:
                 msg = self.__print('Actuator:waitIdle() : Successfully finished!')
                 return True, msg
+            if ls_stop:
+                msg = self.__print('Actuator:waitIdle() : WARNING! Actuator touches the limitswitch!')
+                print(msg)
+                return False, msg
             pass
         msg = 'Actuator:waitIdle() : ERROR! Exceed max number of loop ({} times)'.format(i)
         print(msg)
@@ -231,7 +346,7 @@ class Actuator:
         self.__print('Actuator:hold() : Hold the actuator')
         for i in range(self.maxwaitloop) :
             self.__sendCommand('!')
-            ret, status = self.getStatus(doSleep=True)
+            ret, status, limitswitch = self.getStatus(doSleep=True)
             if not ret          : return False, 'Actuator:hold() : Failed to get status!'
             if status == 'Hold' : return True , 'Actuator:hold() : Successfully hold the actuator!'
             print('Actuator:hold() : WARNING! Could not hold the actuator! --> Retry')
@@ -243,26 +358,80 @@ class Actuator:
     # Release(unhold) the hold state
     def release(self) :
         self.__print('Actuator:release() : Release the actuator from hold state')
-        self.__sendCommand('~')
+        self.__sendCommand('~') # cycle start
+        self.__sendCommand('$X') # kill alarm lock
         return True, 'Actuator:release() :'
 
     # Homing
     def homing(self) :
+        self.release()
         self.__print('Actuator:homing() : Move to (-x, -y) direction until limit switches turn ON')
-        self.__sendCommand('$H')
-        time.sleep(5)
-        self.ser.flushInput()
-        time.sleep(2)
-        res = self.__readAll() # this is necessary to work correctly.
-        self.__print(f'Actuator:homing() : response = {res}')
-        """
-        ret, mgs = self.waitIdle()
-        if not ret:
-            msg = 'Actuator:homing() : Failed to waitIdle()'
+        speedrate_fast = 0.2
+        speedrate_slow = 0.005
+
+        # X-axis homing
+        # Fast homing
+        self.__print('Actuator:homing() : Move to -x')
+        res, msg = self.moveDiff(dx=-1.*self.Xmax, speedrate=speedrate_fast, nolimit=True)
+        if res:
+            print('Actuator:homing() : ERROR! Did NOT touch x limit switch in fast homing')
+            return False, 'Actuator:homing() : Failed to touch the x limit switch in fast homing!'
+        self.__print('Actuator:homing() : Touched x limit switch')
+        self.release()
+        # Back a small distance
+        self.__print('Actuator:homing() : Move back a small distance in x')
+        res, msg = self.moveDiff(dx=5., speedrate=1., nolimit=True)
+        # Slow homing
+        self.__print('Actuator:homing() : Move to x limit switch slowly')
+        res, msg = self.moveDiff(dx=-10., speedrate=speedrate_slow, nolimit=True)
+        if res:
+            print('Actuator:homing() : ERROR! Did NOT touch x limit switch in slow homing')
+            return False, 'Actuator:homing() : Failed to touch the x limit switch in slow homing!'
+        self.release()
+        res, position, xyz, limitswitch = self.getPositionStatus()
+        if limitswitch[0]:
+            self.__print('Actuator:homing() : Successfully finish homing in x-axis (X-axis limitswitch is ON.)')
+        else:
+            msg = 'Actuator:homing() : Failed to do homing in x-axis (X-axis limitswitch is OFF.)'
             print(msg)
             return False, msg
-        """
-        return True, 'Actuator:homing() : Successfully homing!'
+
+        # Y-axis homing
+        # Fast homing
+        self.__print('Actuator:homing() : Move to -y')
+        res, msg = self.moveDiff(dy=-1.*self.Ymax, speedrate=speedrate_fast, nolimit=True)
+        if res:
+            print('Actuator:homing() : ERROR! Did NOT touch y limit switch in fast homing')
+            return False, 'Actuator:homing() : Failed to touch the y limit switch in fast homing!'
+        self.__print('Actuator:homing() : Touched y limit switch')
+        self.release()
+        # Back a small distance
+        self.__print('Actuator:homing() : Move back a small distance in y')
+        res, msg = self.moveDiff(dy=5., speedrate=1., nolimit=True)
+        # Slow homing
+        self.__print('Actuator:homing() : Move to y limit switch slowly')
+        res, msg = self.moveDiff(dy=-10., speedrate=speedrate_slow, nolimit=True)
+        if res:
+            print('Actuator:homing() : ERROR! Did NOT touch y limit switch in slow homing')
+            return False, 'Actuator:homing() : Failed to touch the y limit switch in slow homing!'
+        self.release()
+        res, position, xyz, limitswitch = self.getPositionStatus()
+        if limitswitch[1] or limitswitch[2]:
+            self.__print('Actuator:homing() : Successfully finish homing in y-axis (Y-axis limitswitch is ON.)')
+        else:
+            msg = 'Actuator:homing() : Failed to do homing in y-axis (Y-axis limitswitch is OFF.)'
+            print(msg)
+            return False, msg
+        # Print initial position & status after homing
+        res, position, xyz, limitswitch = self.getPositionStatus(doPrint=True)
+
+        # Reconnect to the BlackBox to initialize the position to (0, 0)
+        self.__reconnect()
+        res, position, xyz, limitswitch = self.getPositionStatus()
+
+        msg = 'Actuator:homing() : Successfully homing!'
+        self.__print(msg)
+        return True, msg
 
     ######################
     # Internal functions #
@@ -408,12 +577,14 @@ class Actuator:
     def __setActuatorParameters(self) :
         self.__sendCommand('$10=0') # Show 0: Work Position (WPos) / 1: Machine Position (MPos)
         self.__sendCommand('$21=0'); # hard limit switch OFF
-        self.__sendCommand('$22=1'); # homing enable
-        self.__sendCommand('$23=7'); # homing direction (-x,-y,-z)
-        self.__sendCommand('$24=100'); # slow speed for homing
-        self.__sendCommand('$25=1000'); # fast speed for homing
-        self.__sendCommand('$27=10'); # back distance for homing
-        self.__sendCommand('$100=16.665') # step/mm X-axis (MISUMI GPA24GT3060-A-P8)
+        self.__sendCommand('$22=0'); # homing disable
+        #self.__sendCommand('$22=1'); # homing enable
+        #self.__sendCommand('$23=7'); # homing direction (-x,-y,-z)
+        #self.__sendCommand('$24=100'); # slow speed for homing
+        #self.__sendCommand('$25=1000'); # fast speed for homing
+        #self.__sendCommand('$26=250'); # msec stop time for homing
+        #self.__sendCommand('$27=10'); # back distance for homing
+        self.__sendCommand('$100=16.665') # step/mm X-axis (MISUMI GPA32GT3060-B-P6.35)
         self.__sendCommand('$101=26.667') # step/mm Y-axis (openbuilds 3GT Timing Pulley 20 Tooth)
         self.__sendCommand('$102=26.667') # step/mm Z-axis (not used) (blackbox original)
         self.__sendCommand('$110={}'.format(self.Fmax)) # speed [mm/min] X-axis 
@@ -431,7 +602,8 @@ class Actuator:
   
  
 if __name__ == '__main__':
-    devfile = '/dev/ttyUSB0'
+    #devfile = '/dev/ttyUSB0'
+    devfile = '/dev/ttyUSB-BlackBox'
     sleep = 0.10
     verbose = 0
     speedrate = 0.5
@@ -445,12 +617,21 @@ if __name__ == '__main__':
     parser.add_argument('-y', '--ypos', dest='y', type=float, default=None, help=f'Target y position (default: None)')
     parser.add_argument('--xdiff', dest='dx', type=float, default=0., help=f'Distance travelled in x-axis (default: 0.)')
     parser.add_argument('--ydiff', dest='dy', type=float, default=0., help=f'Distance travelled in y-axis (default: 0.)')
+    parser.add_argument('--nohoming', dest='nohoming', default=False, action='store_true', help=f'Will not do homing before movement (default: False)')
+    parser.add_argument('--release', dest='release', default=False, action='store_true', help=f'Will release the actuator before movement (default: False)')
     args = parser.parse_args()
 
     act = Actuator(args.devfile, args.sleep, args.verbose)
 
+    # Release
+    if args.release:
+        act.release()
+        pass
+
     # Homing (NOTE: This is required to know the correct position.)
-    act.homing()
+    if not args.nohoming:
+        act.homing()
+        pass
 
     # Move to (x,y)
     if args.x is not None or args.y is not None:
@@ -462,4 +643,10 @@ if __name__ == '__main__':
         act.moveDiff(args.dx, args.dy, speedrate=args.speedrate)
         pass
 
+    # Print current status
+    if args.verbose > 0:
+        act.getPositionStatus(doPrint=True)
+        pass
+
+    del act
     pass

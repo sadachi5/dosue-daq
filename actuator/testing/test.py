@@ -5,7 +5,8 @@ import os, sys
 import time
 import datetime
 
-devlocation = '/dev/ttyUSB0'
+#devlocation = '/dev/ttyUSB0'
+devlocation = '/dev/ttyUSB-BlackBox'
 
 hostname = socket.gethostname();
 print('hostname : {}'.format(hostname));
@@ -208,8 +209,8 @@ def rapidhold(serial) :
 def setActuatorParameters(serial) :
     Fmax = 2000
     sendCommand(serial, '$10=0') # Show 0: Work Position (WPos) / 1: Machine Position (MPos)
-    sendCommand(serial, '$21=0'); # hard limit switch OFF
-    sendCommand(serial, '$100=22.920') # step/mm X-axis (MISUMI GPA24GT3060-A-P8)
+    sendCommand(serial, '$21=0'); # hard limit switch ON
+    sendCommand(serial, '$100=16.665') # step/mm X-axis (MISUMI GPA32GT3060-B-P6.35)
     sendCommand(serial, '$101=26.667') # step/mm Y-axis (openbuilds 3GT Timing Pulley 20 Tooth)
     sendCommand(serial, '$102=26.667') # step/mm Z-axis (not used) (blackbox original)
     sendCommand(serial, '$110={}'.format(Fmax)) # speed [mm/min] X-axis 
@@ -271,8 +272,8 @@ printstatus(ser)
 printstatus(ser)
 #sendCommand(ser, '$J=G91 F1000 X10', verbose=1)
 #sendCommand(ser, 'G91 G1 F1000 X-10', verbose=1)
-sendCommand(ser, 'G91 G1 F500 Y10', verbose=1)
-waitIdle(ser);
+#sendCommand(ser, 'G91 G1 F500 Y10', verbose=1)
+#waitIdle(ser);
 printstatus(ser)
 
 #getresponse(ser, '$X');
@@ -294,4 +295,4 @@ getresponse(ser, '$C');
 #'''
 
 # Close the serial communication
-ser.close()
+#ser.close()
