@@ -25,7 +25,7 @@ class Actuator:
         self.Xmin = 0.
         self.Xmax = 700.
         self.Ymin = 0.
-        self.Ymax = 1000.
+        self.Ymax = 900.
 
         # Open serial communication
         self.ser = None
@@ -111,7 +111,7 @@ class Actuator:
                 break
             pass
         self.__print(f'Actuator:move() : initial limitswitch = {initial_limitswitch}')
-        if initial_limitswitch and (x <= x_now or y <= y_now):
+        if initial_limitswitch and (x is not None and x <= x_now) or (y is not None and y <= y_now):
             msg = f'Actuator:move() : WARMING! Initial limitswitch is ON.'\
                   f'--> Do NOT move!\n'\
                   f'Actuator:move() : current (x, y) = ({x_now}, {y_now})\n'\
