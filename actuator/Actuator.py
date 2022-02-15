@@ -60,22 +60,24 @@ class Actuator:
 
     # move
     # move to (x,y) position
-    def move(self, x=None, y=None, speedrate=0.1) :
+    def move(self, x=None, y=None, speedrate=0.1, nolimit=False) :
         if speedrate<0. or speedrate>1. :
             print("Actuator:move() : WARNING! Speedrate should be between 0 and 1.")
             print("Actuator:move() : WARNING! Speedrate is sed to 0.1.")
             speedrate = 0.1
             pass
-        if (x is not None) and (self.Xmin>x or self.Xmax<x) :
-            print("Actuator:move() : ERROR! X position (={}) is not valid range ({}--{}).".format(x, self.Xmin, self.Xmax))
-            print("Actuator:move() : ERROR! --> Do NOT move!")
-            msg = 'Actuator:move : Failed to move due to being out of range in X position'
-            return False, msg
-        if (y is not None) and (self.Ymin>y or self.Ymax<y) :
-            print("Actuator:move() : ERROR! Y position (={}) is not valid range ({}--{}).".format(y, self.Ymin, self.Ymax))
-            print("Actuator:move() : ERROR! --> Do NOT move!")
-            msg = 'Actuator:move() : Failed to move due to being out of range in Y position'
-            return False, msg
+        if not nolimit:
+            if (x is not None) and (self.Xmin>x or self.Xmax<x) :
+                print("Actuator:move() : ERROR! X position (={}) is not valid range ({}--{}).".format(x, self.Xmin, self.Xmax))
+                print("Actuator:move() : ERROR! --> Do NOT move!")
+                msg = 'Actuator:move : Failed to move due to being out of range in X position'
+                return False, msg
+            if (y is not None) and (self.Ymin>y or self.Ymax<y) :
+                print("Actuator:move() : ERROR! Y position (={}) is not valid range ({}--{}).".format(y, self.Ymin, self.Ymax))
+                print("Actuator:move() : ERROR! --> Do NOT move!")
+                msg = 'Actuator:move() : Failed to move due to being out of range in Y position'
+                return False, msg
+            pass
         speed = int(speedrate * (self.Fmax-self.Fmin) + self.Fmin)
         # G90: Position move / G91: Diff. move
         moveAxis = []
@@ -618,6 +620,7 @@ if __name__ == '__main__':
     parser.add_argument('--xdiff', dest='dx', type=float, default=0., help=f'Distance travelled in x-axis (default: 0.)')
     parser.add_argument('--ydiff', dest='dy', type=float, default=0., help=f'Distance travelled in y-axis (default: 0.)')
     parser.add_argument('--nohoming', dest='nohoming', default=False, action='store_true', help=f'Will not do homing before movement (default: False)')
+    parser.add_argument('--nolimit', dest='nolimit', default=False, action='store_true', help=f'Will not check the distance limit (default: False)')
     parser.add_argument('--release', dest='release', default=False, action='store_true', help=f'Will release the actuator before movement (default: False)')
     args = parser.parse_args()
 
@@ -635,12 +638,12 @@ if __name__ == '__main__':
 
     # Move to (x,y)
     if args.x is not None or args.y is not None:
-        act.move(args.x, args.y, speedrate=args.speedrate)
+        act.move(args.x, args.y, speedrate=args.speedrate, nolimit=args.nolimit)
         pass
 
     # Move by (dx,dy)
     if args.dx != 0. or args.dy != 0.:
-        act.moveDiff(args.dx, args.dy, speedrate=args.speedrate)
+        act.moveDiff(args.dx, args.dy, speedrate=args.speedrate, nolimit=args.nolimit)
         pass
 
     # Print current status
