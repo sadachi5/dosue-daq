@@ -29,9 +29,10 @@ class XYscan:
     At each (x,y) point, _measure() will run.
     """
 
-    def __init__(self, xy_list, act, spa=None, sg=None, sleep=1, verbose=0):
+    def __init__(self, xy_list, act, spa=None, sg=None, sleep=1, speedrate=0.5, verbose=0):
         self.verbose = verbose
         self.xy_list = xy_list # list of (x,y)
+        self.speedrate = speedrate # Actuator speedrate
         self.act = act # Actuator Class
         self.spa = spa # Spectrum Analyzer Class
         self.sg = sg # Signal Generator Class
@@ -71,7 +72,7 @@ class XYscan:
             outfile = f'{outdir}/{i}_{x}_{y}'
             # Move
             self._print(f'run_scan(): Move to ({x},{y})', 0)
-            self.act.move(x, y)
+            self.act.move(x, y, speedrate=self.speedrate)
             time.sleep(self.sleep)
             # Measure
             self._print(f'run_scan(): Measure at ({x},{y})', 0)
@@ -142,26 +143,27 @@ class XYscan:
  
 
 if __name__ == '__main__':
-    outdir = '/data/xy_scan/test'
-    freq = 20e+9 # Hz
+    outdir = '/data/xy_scan/test2'
+    freq = 20 # GHz
     verbose = 0
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', dest='verbose', type=int, default=verbose, help=f'verbosity level (default: {verbose})')
     parser.add_argument('-o', '--outdir', default=outdir, help=f'Output directory name (default: {outdir})')
-    parser.add_argument('-f', '--freq', default=freq, type=int, help=f'Frequency [Hz] (default: {freq})')
+    parser.add_argument('-f', '--freq', default=freq, type=int, help=f'Frequency [GHz] (default: {freq})')
     args = parser.parse_args()
 
     # Frequency Setting
-    freq = args.freq # Hz
+    freq = int(args.freq * 1.e+9) # GHz to Hz
     freq_GHz = freq * 1.e-9 # GHz
-    freq_span_kHz = 200.0 # kHz
+    freq_span_kHz = 10.0 # kHz
     rbw = 0.3 # kHz
     meas_time = 1 # sec
     nAve = 1 # Number of average for each data
 
     # Actuator Setup
     devfile = '/dev/ttyUSB-BlackBox'
+    speedrate = 0.5
     act = Actuator(devfile, verbose=args.verbose)
     # Release
     act.release()
@@ -183,26 +185,27 @@ if __name__ == '__main__':
     # Signal Generator Setup
     sg = E8257D(host_ip=E8257D_IP_ADDRESS)
     sg.connect()
-    sg.freq = args.freq
-    sg.power = -20. # dBm
+    # use x2 multiplier
+    sg.freq = freq/2
+    sg.power = 5. # dBm
     print(f'frequency = {sg.freq:e} [Hz]')
     print(f'power = {sg.power} [dBm]')
     print(f'power = {sg.power_W} [W]')
 
     # Create a scan xy list
-    x = np.arange(100, 600, 10) # start, stop, step (0<=x<=700) [mm]
-    y = np.arange(100, 800, 10) # start, stop, step (0<=y<=900) [mm]
+    x = np.arange(50, 750, 50) # start, stop, step (0<=x<=700) [mm]
+    y = np.arange(50, 750, 50) # start, stop, step (0<=y<=900) [mm]
     x_grid, y_grid = np.meshgrid(x, y) # 2D grid in x-axis / y-axis
     xx = x_grid.reshape(-1) # flatten to 1D array
     yy = y_grid.reshape(-1) # flatten to 1D array
     xy_list = np.stack((xx, yy), axis=1) # create list of (x,y)
     # Simple Example
-    xy_list = [(25,25),(25,50),(50,50),(50,25)]
+    # xy_list = [(250,250),(250,500),(500,500),(500,250)]
     print(f'x-scan (size: {len(x)}) = {x}')
     print(f'y-scan (size: {len(y)}) = {y}')
     print(f'xy-scan (size: {len(xy_list)}) = {xy_list}')
 
-    xyscan = XYscan(xy_list, act=act, spa=spa, sg=sg)
+    xyscan = XYscan(xy_list, act=act, spa=spa, sg=sg, speedrate=speedrate)
     xyscan.run_scan(outdir=args.outdir)
     print(f'Finish XY-scan!')
 
