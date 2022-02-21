@@ -67,17 +67,32 @@ class XYscan:
                 return False
             pass
 
-        for i, (x, y) in enumerate(self.xy_list):
-            # Define the outfile name
-            outfile = f'{outdir}/{i}_{x}_{y}'
-            # Move
-            self._print(f'run_scan(): Move to ({x},{y})', 0)
-            self.act.move(x, y, speedrate=self.speedrate)
-            time.sleep(self.sleep)
-            # Measure
-            self._print(f'run_scan(): Measure at ({x},{y})', 0)
-            self._measure(outfile=outfile)
-            pass
+        # Open log file
+        logfilename = f'{outdir}/run_scan.log'
+        with open(logfilename, 'w') as logfile:
+            print(f'Open logfile: {logfilename}') 
+            logfile.write(f'# date time x y z')
+
+            for i, (x, y) in enumerate(self.xy_list):
+                # Define the outfile name
+                outfile = f'{outdir}/{i}_{x}_{y}'
+                # Move
+                self._print(f'run_scan(): Move to ({x},{y})', 0)
+                self.act.move(x, y, speedrate=self.speedrate)
+                _ret, _xyz = self.act.getPosition()
+                if not _ret:
+                    print('WARNING!: Failed to get position!')
+                    x = y = z = 'Nan'
+                else:
+                    x,y,z = _xyz
+                    pass
+                time.sleep(self.sleep)
+                now = datetime.datetime.now()
+                logfile.write(f'{now} {x} {y} {z}\n')
+                # Measure
+                self._print(f'run_scan(): Measure at ({x},{y})', 0)
+                self._measure(outfile=outfile)
+                pass
         return True
   
     ######################

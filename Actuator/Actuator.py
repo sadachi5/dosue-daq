@@ -79,21 +79,7 @@ class Actuator:
                 return False, msg
             pass
         speed = int(speedrate * (self.Fmax-self.Fmin) + self.Fmin)
-        # G90: Position move / G91: Diff. move
-        moveAxis = []
-        if x is not None and y is None :
-            cmd  = '$J=G90 F{:d} X{}'.format(speed, x) 
-            moveAxis = [0]
-        elif y is not None and x is None :
-            cmd  = '$J=G90 F{:d} Y{}'.format(speed, y) 
-            moveAxis = [1, 2]
-        elif x is not None and y is not None :
-            cmd  = '$J=G90 F{:d} X{} Y{}'.format(speed, x, y) 
-            moveAxis = [0, 1, 2]
-        else:
-            msg = 'Actuator:move() : Warning! There is no target X or Y position.\n'\
-                  'Actuator:move() : Warning! --> Do NOT move!'
-            return False, msg
+        # Check status
         # Get current position
         tmp, tmp2 = self.getPosition()
         if len(tmp2) == 3 :
@@ -102,23 +88,57 @@ class Actuator:
             msg = "Actuator:move() : ERROR! Failed to get the current position!"
             print(msg)
             return False, msg
-        # Get current status
+        # Get current limitswitch
         ret, status, limitswitch = self.getStatus()
-        initial_limitswitch = False
-        for axis in moveAxis:
-            if limitswitch[axis] :
-                initial_limitswitch = True
-                break
-            pass
-        self.__print(f'Actuator:move() : initial limitswitch = {initial_limitswitch}')
-        if initial_limitswitch and ((x is not None and x < x_now) or (y is not None and y < y_now)):
-            msg = f'Actuator:move() : WARMING! Initial limitswitch is ON.'\
-                  f'--> Do NOT move!\n'\
+        self.__print(f'Actuator:move() : initial limitswitch = {limitswitch}')
+        if limitswitch[0] and (x is not None and x < x_now):
+            msg = f'Actuator:move() : WARMING! Initial limitswitch is ON and move backward on x-axis.'\
+                  f'--> Do NOT move on x-axis!\n'\
                   f'Actuator:move() : current (x, y) = ({x_now}, {y_now})\n'\
                   f'Actuator:move() : target  (x, y) = ({x}, {y})\n'\
                   f'Actuator:move() : limitswitch (x, y1, y2) = '\
                   f'({limitswitch[0]}, {limitswitch[1]}, {limitswitch[2]})'
             print(msg)
+            x = None
+            pass
+        if limitswitch[1] and (y is not None and y < y_now):
+            msg = f'Actuator:move() : WARMING! Initial limitswitch is ON and move backward on y-axis.'\
+                  f'--> Do NOT move on y-axis!\n'\
+                  f'Actuator:move() : current (x, y) = ({x_now}, {y_now})\n'\
+                  f'Actuator:move() : target  (x, y) = ({x}, {y})\n'\
+                  f'Actuator:move() : limitswitch (x, y1, y2) = '\
+                  f'({limitswitch[0]}, {limitswitch[1]}, {limitswitch[2]})'
+            print(msg)
+            y = None
+            pass
+        # G90: Position move / G91: Diff. move
+        checkAxis = []
+        if x is not None and y is None :
+            cmd  = '$J=G90 F{:d} X{}'.format(speed, x) 
+            # Check the x-axis limitswitch only in backward movement
+            if x < x_now:
+                checkAxis = [0]
+                pass
+        elif y is not None and x is None :
+            cmd  = '$J=G90 F{:d} Y{}'.format(speed, y) 
+            # Check the y-axis limitswitch only in backward movement
+            if y < y_now:
+                checkAxis = [1, 2]
+                pass
+        elif x is not None and y is not None :
+            cmd  = '$J=G90 F{:d} X{} Y{}'.format(speed, x, y) 
+            checkAxis = [0, 1, 2]
+            # Check the x-axis limitswitch only in backward movement
+            if x < x_now:
+                checkAxis = [0]
+                pass
+            # Check the y-axis limitswitch only in backward movement
+            if y < y_now:
+                checkAxis += [1, 2]
+                pass
+        else:
+            msg = 'Actuator:move() : Warning! There is no target X or Y position.\n'\
+                  'Actuator:move() : Warning! --> Do NOT move!'
             return False, msg
         # Move
         self.__print(f'Actuator:move() : Move to ({x},{y})')
@@ -127,10 +147,10 @@ class Actuator:
             msg = 'Actuator:move() : ERROR in __sendCommand(command = {})'.format(cmd)
             return False, msg
         self.__print(f'Actuator:move() : Send command = "{cmd}"')
-        if initial_limitswitch:
-            time.sleep(2)
-            pass
-        ret, msg = self.waitIdle(moveAxis=moveAxis)
+        #if initial_limitswitch:
+        #    time.sleep(2)
+        #    pass
+        ret, msg = self.waitIdle(checkAxis=checkAxis)
         if not ret:
             msg = 'Actuator:move() : WARNING! in waitIdle() --> hold()'
             print(msg)
@@ -169,31 +189,39 @@ class Actuator:
                 return False, msg
             pass
         speed = int(speedrate * (self.Fmax-self.Fmin) + self.Fmin)
-        moveAxis = []
-        if dx != 0.:
-            moveAxis.append(0)
-            pass
-        if dy != 0.:
-            moveAxis.append(1)
-            moveAxis.append(2)
-            pass
         # Get current status
         ret, status, limitswitch = self.getStatus()
-        initial_limitswitch = False
-        for axis in moveAxis:
-            if limitswitch[axis] :
-                initial_limitswitch = True
-                break
-            pass
-        self.__print(f'Actuator:moveDiff() : initial limitswitch = {initial_limitswitch}')
-        if initial_limitswitch and (dx < 0. or dy < 0.):
-            msg = f'Actuator:moveDiff() : WARNING! Initial limitswitch is ON.'\
-                  f'--> Do NOT move!\n'\
-                  f'Actuator:moveDiff() : (dx, dy) = ({dx}, {dy})\n'\
-                  f'Actuator:moveDiff() : limitswitch (x, y1, y2) = '\
+        self.__print(f'Actuator:moveDiff() : initial limitswitch = {limitswitch}')
+        if limitswitch[0] and dx < 0.:
+            msg = f'Actuator:move() : WARMING! Initial limitswitch is ON and move backward on x-axis.'\
+                  f'--> Do NOT move on x-axis!\n'\
+                  f'Actuator:move() : current (x, y) = ({x_now}, {y_now})\n'\
+                  f'Actuator:move() : target  (dx, dy) = ({dx}, {dy})\n'\
+                  f'Actuator:move() : limitswitch (x, y1, y2) = '\
                   f'({limitswitch[0]}, {limitswitch[1]}, {limitswitch[2]})'
             print(msg)
-            return False, msg
+            dx = 0.
+            pass
+        if limitswitch[1] and dy < 0.:
+            msg = f'Actuator:move() : WARMING! Initial limitswitch is ON and move backward on y-axis.'\
+                  f'--> Do NOT move on y-axis!\n'\
+                  f'Actuator:move() : current (x, y) = ({x_now}, {y_now})\n'\
+                  f'Actuator:move() : target  (dx, dy) = ({dx}, {dy})\n'\
+                  f'Actuator:move() : limitswitch (x, y1, y2) = '\
+                  f'({limitswitch[0]}, {limitswitch[1]}, {limitswitch[2]})'
+            print(msg)
+            dy = 0.
+            pass
+        # Determine the checkAxis
+        checkAxis = []
+        # Check the x-axis limitswitch only in backward movement
+        if dx < 0.:
+            checkAxis = [0]
+            pass
+        # Check the y-axis limitswitch only in backward movement
+        if dy < 0.:
+            checkAxis += [1, 2]
+            pass
         # Move
         # G90: Position move / G91: Diff. move
         cmd  = '$J=G91 F{:d} X{} Y{}'.format(speed, dx, dy)
@@ -204,10 +232,10 @@ class Actuator:
             print(msg)
             return False, msg
         self.__print(f'Actuator:moveDiff() : Send command = "{cmd}"')
-        if initial_limitswitch:
-            time.sleep(2)
-            pass
-        ret, msg = self.waitIdle(moveAxis=moveAxis)
+        #if initial_limitswitch:
+        #    time.sleep(2)
+        #    pass
+        ret, msg = self.waitIdle(checkAxis=checkAxis)
         if not ret:
             msg = 'Actuator:moveDiff() : WARNING! in waitIdle() --> hold()'
             print(msg)
@@ -278,11 +306,11 @@ class Actuator:
         return ret and ret2, xyz, status, limitswitch 
 
     # status==Idle
-    # moveAxis: 0:X-axis, 1:Y1-axis, 2:Y2-axis
-    def isIdle(self, doSleep=True, moveAxis=[]):
+    # checkAxis: 0:X-axis, 1:Y1-axis, 2:Y2-axis
+    def isIdle(self, doSleep=True, checkAxis=[]):
         ret, status, limitswitch = self.getStatus(doSleep)
         ls_stop = False
-        for axis in moveAxis:
+        for axis in checkAxis:
             if limitswitch[axis]:
                 ls_stop = True
                 break
@@ -299,11 +327,11 @@ class Actuator:
             return False, ls_stop, msg
     
     # status==Jog or Run
-    # moveAxis: 0:X-axis, 1:Y1-axis, 2:Y2-axis
-    def isRun(self, doSleep=True, moveAxis=[]):
+    # checkAxis: 0:X-axis, 1:Y1-axis, 2:Y2-axis
+    def isRun(self, doSleep=True, checkAxis=[]):
         ret, status, limitswitch = self.getStatus(doSleep)
         ls_stop = False
-        for axis in moveAxis:
+        for axis in checkAxis:
             if limitswitch[axis]:
                 ls_stop = True
                 break
@@ -317,11 +345,11 @@ class Actuator:
 
     # Wait for end of moving (until Idle status)
     # max_loop_time : maximum waiting time [sec]
-    # moveAxis: 0:X-axis, 1:Y1-axis, 2:Y2-axis
-    def waitIdle(self, max_loop_time = 180, moveAxis=[]):
+    # checkAxis: 0:X-axis, 1:Y1-axis, 2:Y2-axis
+    def waitIdle(self, max_loop_time = 180, checkAxis=[]):
         max_loop = int(max_loop_time/self.sleep) # # of loop for  max_loop_time [sec]
         for i in range(max_loop):
-            isIdle, ls_stop, msg = self.isIdle(moveAxis=moveAxis)
+            isIdle, ls_stop, msg = self.isIdle(checkAxis=checkAxis)
             if isIdle:
                 msg = self.__print('Actuator:waitIdle() : Successfully finished!')
                 return True, msg
@@ -592,9 +620,9 @@ class Actuator:
         self.__sendCommand('$110={}'.format(self.Fmax)) # speed [mm/min] X-axis 
         self.__sendCommand('$111={}'.format(self.Fmax)) # speed [mm/min] Y-axis
         self.__sendCommand('$112={}'.format(self.Fmax)) # speed [mm/min] Z-axis (not used)
-        self.__sendCommand('$120=10') # accel. [mm/sec^2] X-axis
-        self.__sendCommand('$121=10') # accel. [mm/sec^2] Y-axis
-        self.__sendCommand('$122=10') # accel. [mm/sec^2] Z-axis (not used)
+        self.__sendCommand('$120=5') # accel. [mm/sec^2] X-axis
+        self.__sendCommand('$121=5') # accel. [mm/sec^2] Y-axis
+        self.__sendCommand('$122=5') # accel. [mm/sec^2] Z-axis (not used)
         self.__sendCommand('$130=1500') # max travel [mm] X-axis
         self.__sendCommand('$131=1500') # max travel [mm] Y-axis
         self.__sendCommand('$132=1500') # max travel [mm] Z-axis (not used)
