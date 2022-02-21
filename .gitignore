@@ -13,6 +13,7 @@ __pycache__/
 
 # temporary files
 aho*
+.ipynb_checkpoints/
 
 # data files
 *.dat
@@ -20,4 +21,3 @@ aho*
 *.out
 \#*
 output/
-
