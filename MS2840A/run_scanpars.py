@@ -4,7 +4,7 @@ import argparse
 
 import numpy as np
 
-import ms2840a
+import MS2840A
 
 
 
@@ -24,7 +24,7 @@ def run_scanpars(configs,
         nRun = config['nRun']
         filename = filename_prefix+f'_{mode}_{freq_start:.6f}GHz_span{freq_span*1.e-3:.2f}MHz_rbw{rbw:.1f}kHz_{meas_time:.1f}sec_{nAve:d}counts_{nRun:d}runs'
         try:
-            ret = ms2840a.main(
+            ret = MS2840A.main(
                 mode       = mode, 
                 freq_start = freq_start,
                 freq_span  = freq_span,

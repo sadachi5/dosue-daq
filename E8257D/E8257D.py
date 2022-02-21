@@ -115,22 +115,22 @@ class E8257D:
     # Frequency
     @property
     def freq(self) :
-        freq = float(self._wr('FREQ:CENT?')) # [Hz]
+        freq = float(self._wr('FREQ?')) # [Hz]
         #print(freq)
         return freq # [Hz]
     @freq.setter
     def freq(self, freq_Hz): # [Hz]
         freq_Hz = int(freq_Hz)
         #print(freq_Hz)
-        self._w(f'FREQ:CENT {freq_Hz}')
+        self._w(f'FREQ {freq_Hz}')
 
     # Power
     @property
     def power(self) :
-        return float(self._wr('POW:REF?')) # [dBm]
+        return float(self._wr('POW?')) # [dBm]
     @power.setter
     def power(self, power_dB): # [dBm]
-        self._w(f'POW:REF {power_dB}DBM')
+        self._w(f'POW {power_dB}DBM')
 
     @property
     def power_W(self) :
@@ -181,7 +181,7 @@ def main(onoff = False, # True:ON, False:OFF
         sg.powerOFF()
         pass
     
-    sg.close()
+    del sg
     print('End')
     return 0
 

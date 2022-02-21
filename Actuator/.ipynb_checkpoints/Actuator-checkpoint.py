@@ -23,9 +23,9 @@ class Actuator:
         self.Fmin =   0
 
         self.Xmin = 0.
-        self.Xmax = 700.
+        self.Xmax = 750.
         self.Ymin = 0.
-        self.Ymax = 900.
+        self.Ymax = 750.
 
         # Open serial communication
         self.ser = None
@@ -81,13 +81,13 @@ class Actuator:
         speed = int(speedrate * (self.Fmax-self.Fmin) + self.Fmin)
         # G90: Position move / G91: Diff. move
         moveAxis = []
-        if x is not None and y is None:
+        if x is not None and y is None :
             cmd  = '$J=G90 F{:d} X{}'.format(speed, x) 
             moveAxis = [0]
-        elif y is not None and x is None:
+        elif y is not None and x is None :
             cmd  = '$J=G90 F{:d} Y{}'.format(speed, y) 
             moveAxis = [1, 2]
-        elif x is not None and y is not None:
+        elif x is not None and y is not None :
             cmd  = '$J=G90 F{:d} X{} Y{}'.format(speed, x, y) 
             moveAxis = [0, 1, 2]
         else:
@@ -111,7 +111,7 @@ class Actuator:
                 break
             pass
         self.__print(f'Actuator:move() : initial limitswitch = {initial_limitswitch}')
-        if initial_limitswitch and (x is not None and x <= x_now) or (y is not None and y <= y_now):
+        if initial_limitswitch and ((x is not None and x + 0.1 < x_now) or (y is not None and y + 0.1 < y_now)):
             msg = f'Actuator:move() : WARMING! Initial limitswitch is ON.'\
                   f'--> Do NOT move!\n'\
                   f'Actuator:move() : current (x, y) = ({x_now}, {y_now})\n'\
@@ -269,8 +269,8 @@ class Actuator:
 
     # get position & status
     def getPositionStatus(self, doSleep=True, doPrint=True):
-        ret, xyz = act.getPosition()
-        ret2, status, limitswitch = act.getStatus()
+        ret, xyz = self.getPosition()
+        ret2, status, limitswitch = self.getStatus()
         self.__print(f'Current Position (x,y,z) = ({xyz[0]},{xyz[1]},{xyz[2]})', -1 if doPrint else 0)
         self.__print(f'Current Status = {status}')
         self.__print(f'Current Limit Switch (x,y1,y2) = '

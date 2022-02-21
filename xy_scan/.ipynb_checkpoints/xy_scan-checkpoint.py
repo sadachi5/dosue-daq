@@ -197,13 +197,11 @@ if __name__ == '__main__':
     #y = np.arange(2, 752 + 50, 50) # start, stop+step, step (0<=y<=750) [mm]
     #x = np.linspace(2,752,3) # start, stop, # of division (0<=x<=750) [mm]
     #y = np.linspace(2,752,3) # start, stop, # of division (0<=y<=750) [mm]
-    #arr1 = np.arange(2,302,50)   # rough mesh
-    #arr2 = np.arange(302,512,10) # fine mesh
-    #arr3 = np.arange(552,802,50) # rough mesh
-    #x = np.hstack([arr1, arr2, arr3])
-    #y = np.hstack([arr1, arr2, arr3])
-    x = np.array([412])
-    y = np.arange(5, 805, 50)
+    arr1 = np.arange(2,302,50)   # rough mesh
+    arr2 = np.arange(302,512,10) # fine mesh
+    arr3 = np.arange(552,802,50) # rough mesh
+    x = np.hstack([arr1, arr2, arr3])
+    y = np.hstack([arr1, arr2, arr3])
     x_grid, y_grid = np.meshgrid(x, y) # 2D grid in x-axis / y-axis
     xx = x_grid.reshape(-1) # flatten to 1D array
     yy = y_grid.reshape(-1) # flatten to 1D array
