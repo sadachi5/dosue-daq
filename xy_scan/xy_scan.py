@@ -71,7 +71,7 @@ class XYscan:
         logfilename = f'{outdir}/run_scan.log'
         with open(logfilename, 'w') as logfile:
             print(f'Open logfile: {logfilename}') 
-            logfile.write(f'# date time x y z')
+            logfile.write(f'# date time x y z\n')
 
             for i, (x, y) in enumerate(self.xy_list):
                 # Define the outfile name

@@ -127,7 +127,7 @@ class Actuator:
                 pass
         elif x is not None and y is not None :
             cmd  = '$J=G90 F{:d} X{} Y{}'.format(speed, x, y) 
-            checkAxis = [0, 1, 2]
+            checkAxis = []
             # Check the x-axis limitswitch only in backward movement
             if x < x_now:
                 checkAxis = [0]
@@ -150,11 +150,13 @@ class Actuator:
         #if initial_limitswitch:
         #    time.sleep(2)
         #    pass
+        self.__print(f'Actuator:move() : check Axis = {checkAxis}')
         ret, msg = self.waitIdle(checkAxis=checkAxis)
         if not ret:
             msg = 'Actuator:move() : WARNING! in waitIdle() --> hold()'
             print(msg)
             self.hold()
+            self.release()
             return False, msg
         msg = self.__print('Actuator:move() : Successfully finished!')
         return True, msg
@@ -193,21 +195,21 @@ class Actuator:
         ret, status, limitswitch = self.getStatus()
         self.__print(f'Actuator:moveDiff() : initial limitswitch = {limitswitch}')
         if limitswitch[0] and dx < 0.:
-            msg = f'Actuator:move() : WARMING! Initial limitswitch is ON and move backward on x-axis.'\
+            msg = f'Actuator:moveDiff() : WARMING! Initial limitswitch is ON and move backward on x-axis.'\
                   f'--> Do NOT move on x-axis!\n'\
-                  f'Actuator:move() : current (x, y) = ({x_now}, {y_now})\n'\
-                  f'Actuator:move() : target  (dx, dy) = ({dx}, {dy})\n'\
-                  f'Actuator:move() : limitswitch (x, y1, y2) = '\
+                  f'Actuator:moveDiff() : current (x, y) = ({x_now}, {y_now})\n'\
+                  f'Actuator:moveDiff() : target  (dx, dy) = ({dx}, {dy})\n'\
+                  f'Actuator:moveDiff() : limitswitch (x, y1, y2) = '\
                   f'({limitswitch[0]}, {limitswitch[1]}, {limitswitch[2]})'
             print(msg)
             dx = 0.
             pass
         if limitswitch[1] and dy < 0.:
-            msg = f'Actuator:move() : WARMING! Initial limitswitch is ON and move backward on y-axis.'\
+            msg = f'Actuator:moveDiff() : WARMING! Initial limitswitch is ON and move backward on y-axis.'\
                   f'--> Do NOT move on y-axis!\n'\
-                  f'Actuator:move() : current (x, y) = ({x_now}, {y_now})\n'\
-                  f'Actuator:move() : target  (dx, dy) = ({dx}, {dy})\n'\
-                  f'Actuator:move() : limitswitch (x, y1, y2) = '\
+                  f'Actuator:moveDiff() : current (x, y) = ({x_now}, {y_now})\n'\
+                  f'Actuator:moveDiff() : target  (dx, dy) = ({dx}, {dy})\n'\
+                  f'Actuator:moveDiff() : limitswitch (x, y1, y2) = '\
                   f'({limitswitch[0]}, {limitswitch[1]}, {limitswitch[2]})'
             print(msg)
             dy = 0.
@@ -227,7 +229,7 @@ class Actuator:
         cmd  = '$J=G91 F{:d} X{} Y{}'.format(speed, dx, dy)
         self.__print(f'Actuator:moveDiff() : Move by ({dx},{dy})')
         ret = self.__sendCommand(cmd)
-        if not ret :
+        if not ret:
             msg = 'Actuator:moveDiff() : ERROR! in __sendCommand(command = {})'.format(cmd)
             print(msg)
             return False, msg
@@ -309,6 +311,7 @@ class Actuator:
     # checkAxis: 0:X-axis, 1:Y1-axis, 2:Y2-axis
     def isIdle(self, doSleep=True, checkAxis=[]):
         ret, status, limitswitch = self.getStatus(doSleep)
+        msg = self.__print(f'Actuator:isIdle() : limitswitch = {limitswitch}', 1)
         ls_stop = False
         for axis in checkAxis:
             if limitswitch[axis]:
@@ -350,6 +353,7 @@ class Actuator:
         max_loop = int(max_loop_time/self.sleep) # # of loop for  max_loop_time [sec]
         for i in range(max_loop):
             isIdle, ls_stop, msg = self.isIdle(checkAxis=checkAxis)
+            self.__print(f'Actuator:waitIdle() : (isIdle, ls_stop) = ({isIdle}, {ls_stop})',1)
             if isIdle:
                 msg = self.__print('Actuator:waitIdle() : Successfully finished!')
                 return True, msg
@@ -403,7 +407,9 @@ class Actuator:
         # Fast homing
         self.__print('Actuator:homing() : Move to -x')
         res, msg = self.moveDiff(dx=-1.*self.Xmax, speedrate=speedrate_fast, nolimit=True)
-        if res:
+        # Check limitswitch
+        ret, status, limitswitch = self.getStatus()
+        if not limitswitch[0]:
             print('Actuator:homing() : ERROR! Did NOT touch x limit switch in fast homing')
             return False, 'Actuator:homing() : Failed to touch the x limit switch in fast homing!'
         self.__print('Actuator:homing() : Touched x limit switch')
@@ -414,7 +420,9 @@ class Actuator:
         # Slow homing
         self.__print('Actuator:homing() : Move to x limit switch slowly')
         res, msg = self.moveDiff(dx=-10., speedrate=speedrate_slow, nolimit=True)
-        if res:
+        # Check limitswitch
+        ret, status, limitswitch = self.getStatus()
+        if not limitswitch[0]:
             print('Actuator:homing() : ERROR! Did NOT touch x limit switch in slow homing')
             return False, 'Actuator:homing() : Failed to touch the x limit switch in slow homing!'
         self.release()
@@ -430,7 +438,9 @@ class Actuator:
         # Fast homing
         self.__print('Actuator:homing() : Move to -y')
         res, msg = self.moveDiff(dy=-1.*self.Ymax, speedrate=speedrate_fast, nolimit=True)
-        if res:
+        # Check limitswitch
+        ret, status, limitswitch = self.getStatus()
+        if not (limitswitch[1] or limitswitch[2]):
             print('Actuator:homing() : ERROR! Did NOT touch y limit switch in fast homing')
             return False, 'Actuator:homing() : Failed to touch the y limit switch in fast homing!'
         self.__print('Actuator:homing() : Touched y limit switch')
@@ -441,7 +451,9 @@ class Actuator:
         # Slow homing
         self.__print('Actuator:homing() : Move to y limit switch slowly')
         res, msg = self.moveDiff(dy=-10., speedrate=speedrate_slow, nolimit=True)
-        if res:
+        # Check limitswitch
+        ret, status, limitswitch = self.getStatus()
+        if not (limitswitch[1] or limitswitch[2]):
             print('Actuator:homing() : ERROR! Did NOT touch y limit switch in slow homing')
             return False, 'Actuator:homing() : Failed to touch the y limit switch in slow homing!'
         self.release()
