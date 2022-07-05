@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import os, sys
 import datetime
 
-IP_ADDRESS = '192.168.215.248'
+IP_ADDRESS = '10.10.10.2'
 PORT = 49153
 
 def write(soc,word:str):

@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 plt.ioff()
 
-IP_ADDRESS = '192.168.215.248'
+IP_ADDRESS = '10.10.10.2'
 PORT = 49153
 TIMEOUT = 600
 
@@ -206,8 +206,8 @@ class MS2840A:
             return None
         data = np.array(data)
         if verbose>0:
-            print(f'MS2840A:read_data(): frequency step  = {self.freq_step*1e-3} kHz')
-            print(f'MS2840A:read_data(): RBW  = {self.band_wid*1e-3} kHz')
+            print(f'MS2840A:read_data(): frequency step  = {self.freq_step} Hz')
+            print(f'MS2840A:read_data(): RBW  = {self.band_wid} Hz')
             if self._fftmode :
                 print(f'MS2840A:read_data(): capture time   = {self.capt_time} sec')
                 print(f'MS2840A:read_data(): analysis time  = {self.ana_time} sec')
@@ -224,14 +224,14 @@ class MS2840A:
     def print_fft_setting(self):
         print('MS2840A:print_fft_setting(): ')
         print('MS2840A:print_fft_setting(): *** fft settings ***')
-        print(f'MS2840A:print_fft_setting(): frequency start = {self.freq_start*1e-9} GHz')
-        print(f'MS2840A:print_fft_setting(): frequency stop  = {self.freq_stop*1e-9} GHz')
-        print(f'MS2840A:print_fft_setting(): frequency span  = {self.freq_span*1e-3} kHz')
-        print(f'MS2840A:print_fft_setting(): frequency step  = {self.freq_step*1e-3} kHz')
-        print(f'MS2840A:print_fft_setting(): RBW  = {self.band_wid*1e-3} kHz')
+        print(f'MS2840A:print_fft_setting(): frequency start = {self.freq_start} Hz')
+        print(f'MS2840A:print_fft_setting(): frequency stop  = {self.freq_stop} Hz')
+        print(f'MS2840A:print_fft_setting(): frequency span  = {self.freq_span} Hz')
+        print(f'MS2840A:print_fft_setting(): frequency step  = {self.freq_step} Hz')
+        print(f'MS2840A:print_fft_setting(): RBW  = {self.band_wid} Hz')
         print(f'MS2840A:print_fft_setting(): capture time   = {self.capt_time} sec')
         print(f'MS2840A:print_fft_setting(): analysis time  = {self.ana_time} sec')
-        print(f'MS2840A:print_fft_setting(): sampling rate  = {self.freq_samp*1e-3} kHz')
+        print(f'MS2840A:print_fft_setting(): sampling rate  = {self.freq_samp} Hz')
         print(f'MS2840A:print_fft_setting(): trace points   = {self.trace_points} points')
         print(f'MS2840A:print_fft_setting(): # of storage data = {self.trace_nAve} times (averaging {self.trace_nAve} times)')
         print(f'MS2840A:print_fft_setting(): detection mode = {self.det_mode}')
@@ -259,16 +259,16 @@ class MS2840A:
         self.data_format = 'REAL'
         # Variable setting
         self.ana_time = 0 # set temporarily
-        self.freq_span  = freq_span # [GHz]
-        self.band_wid   = rbw # [kHz]
-        if step is not None: self.freq_step = step # [kHz]
+        self.freq_span  = freq_span # [Hz]
+        self.band_wid   = rbw # [Hz]
+        if step is not None: self.freq_step = step # [Hz]
         if time is not None: self.ana_time = time # [sec]
         else               : 
             print('MS2840A:fft_setting(): Warning! There is no argument of measurement time for one trace.')
             print('MS2840A:fft_setting(): Warning! --> analysis time is set to AUTO.')
             self.is_ana_time_auto = True 
             pass
-        self.freq_start = freq_start # [GHz]
+        self.freq_start = freq_start # [Hz]
         self.trace_nAve = nAve
 
         if verbose>0 : self.print_fft_setting()
@@ -293,12 +293,12 @@ class MS2840A:
     def print_sweep_setting(self):
         print('MS2840A:print_sweep_setting(): ')
         print('MS2840A:print_sweep_setting(): *** sweep settings ***')
-        print(f'MS2840A:print_sweep_setting(): frequency start = {self.freq_start*1e-9} GHz')
-        print(f'MS2840A:print_sweep_setting(): frequency stop  = {self.freq_stop*1e-9} GHz')
-        print(f'MS2840A:print_sweep_setting(): frequency span  = {self.freq_span*1e-3} kHz')
-        print(f'MS2840A:print_sweep_setting(): frequency step  = {self.freq_step*1e-3} kHz')
-        print(f'MS2840A:print_sweep_setting(): RBW  = {self.band_wid*1e-3} kHz')
-        print(f'MS2840A:print_sweep_setting(): VBW  = {self.video_wid*1e-3} kHz')
+        print(f'MS2840A:print_sweep_setting(): frequency start = {self.freq_start} Hz')
+        print(f'MS2840A:print_sweep_setting(): frequency stop  = {self.freq_stop} Hz')
+        print(f'MS2840A:print_sweep_setting(): frequency span  = {self.freq_span} Hz')
+        print(f'MS2840A:print_sweep_setting(): frequency step  = {self.freq_step} Hz')
+        print(f'MS2840A:print_sweep_setting(): RBW  = {self.band_wid} Hz')
+        print(f'MS2840A:print_sweep_setting(): VBW  = {self.video_wid} Hz')
         print(f'MS2840A:print_sweep_setting(): VBW mode    = {self.video_mode}')
         print(f'MS2840A:print_sweep_setting(): sweep time  = {self.sweep_time} sec')
         print(f'MS2840A:print_sweep_setting(): sweep type  = {self.sweep_type}')
@@ -337,10 +337,10 @@ class MS2840A:
         self.sweep_type = 'OSWeep' # sweep only mode (no FFT)
         self.data_format = 'REAL'
         # Variable setting
-        self.band_wid   = rbw # [kHz]
-        if step is not None: self.freq_step = step # [kHz]
-        self.freq_start = freq_start # [GHz]
-        self.freq_stop  = freq_stop # [GHz]
+        self.band_wid   = rbw # [Hz]
+        if step is not None: self.freq_step = step # [Hz]
+        self.freq_start = freq_start # [Hz]
+        self.freq_stop  = freq_stop # [Hz]
         self.det_mode = 'RMS' # NORM, POS, NEG, SAMP, RMS
         self.trace_points = (int)((self.freq_stop-self.freq_start)/self.band_wid)*10 + 1
         self.trace_nAve = nAve
@@ -394,37 +394,37 @@ class MS2840A:
     def freq_start(self) :
         return float(self._wr('FREQ:STAR?')) # [Hz]
     @freq_start.setter
-    def freq_start(self, freq_GHz):
-        self._w(f'FREQ:STAR {freq_GHz}GHZ')
+    def freq_start(self, freq_Hz):
+        self._w(f'FREQ:STAR {freq_Hz}HZ')
 
     @property
     def freq_stop(self) :
         return float(self._wr('FREQ:STOP?')) # [Hz]
     @freq_stop.setter
-    def freq_stop(self, freq_GHz):
-        self._w(f'FREQ:STOP {freq_GHz}GHZ')
+    def freq_stop(self, freq_Hz):
+        self._w(f'FREQ:STOP {freq_Hz}HZ')
 
     @property
     def freq_center(self):
         return float(self._wr('FREQ:CENT?')) # [Hz]
     @freq_center.setter
-    def freq_center(self, freq_GHz):
-        self._w(f'FREQ:CENT {freq_GHz}GHZ')
+    def freq_center(self, freq_Hz):
+        self._w(f'FREQ:CENT {freq_Hz}HZ')
 
     @property
     def freq_span(self):
         return float(self._wr('FREQ:SPAN?')) # [Hz]
     @freq_span.setter
-    def freq_span(self, freq_kHz):
-        self._w(f'FREQ:SPAN {freq_kHz}KHZ')
+    def freq_span(self, freq_Hz):
+        self._w(f'FREQ:SPAN {freq_Hz}HZ')
 
     ## Frequency step width
     @property
     def freq_step(self) :
         return float(self._wr('FREQ:CENT:STEP?')) # [Hz]
     @freq_step.setter
-    def freq_step(self, step_kHz):
-        self._w(f'FREQ:CENT:STEP {step_kHz}KHZ')
+    def freq_step(self, step_Hz):
+        self._w(f'FREQ:CENT:STEP {step_Hz}HZ')
 
     ## Auto RBW (Resolution Bandwidth)
     @property
@@ -438,9 +438,9 @@ class MS2840A:
     def band_wid(self) :
         return float(self._wr('BWID?')) # [Hz]
     @band_wid.setter
-    def band_wid(self, wid_kHz):
+    def band_wid(self, wid_Hz):
         self.is_band_wid_auto = False # AUTO band width OFF
-        self._w(f'BWID {wid_kHz}KHZ')
+        self._w(f'BWID {wid_Hz}HZ')
 
     ## Auto VBW (Video Bandwidth, only for SWEEP mode)
     @property
@@ -456,9 +456,9 @@ class MS2840A:
         if self._fftmode : return None
         return float(self._wr('BWID:VID?')) # [Hz]
     @video_wid.setter
-    def video_wid(self, wid_kHz):
+    def video_wid(self, wid_Hz):
         self.is_video_wid_auto = 0 # AUTO video width OFF
-        self._w(f'BWID:VID {wid_kHz}KHZ')
+        self._w(f'BWID:VID {wid_Hz}HZ')
     ## VBW mode (VIDeo or POWer, only for SWEEP mode)
     @property
     def video_mode(self) :
@@ -718,9 +718,9 @@ class MS2840A:
 
 
 def main(mode='FFT', 
-        freq_start = 20.,  #GHz
-        freq_span  = 2.5e+3, #kHz
-        rbw        = 0.3, #kHz
+        freq_start = 20e+9,  #Hz
+        freq_span  = 2500e+3, #Hz
+        rbw        = 300, #Hz
         meas_time  = None, # sec
         nAve       = 10, # times (number of average for each data)
         nRun       = 10, # times (number of run or saved data)
@@ -740,7 +740,7 @@ def main(mode='FFT',
     if mode=='FFT' : # FFT mode by using Signal Analyzer
 
         # parameter setting
-        step = 1. # kHz
+        step = 1e+3 # Hz
         # fft setting
         start_time = time.time()
         ms.fft_setting(freq_start=freq_start, freq_span=freq_span, rbw=rbw, time=meas_time, step=step, nAve=nAve, verbose=verbose+1)
@@ -764,8 +764,8 @@ def main(mode='FFT',
     elif mode=='SWEEP' :
 
         # parameter setting
-        freq_stop = freq_start + freq_span*1e-6 # GHz
-        step      = 1. # kHz
+        freq_stop = freq_start + freq_span # Hz
+        step      = 1000 # Hz
         # fft setting
         start_time = time.time()
         ms.sweep_setting(freq_start=freq_start, freq_stop=freq_stop, rbw=rbw, time=meas_time, step=step, nAve=nAve, verbose=verbose+1)
@@ -976,23 +976,23 @@ if __name__ == '__main__':
     filename_add_suffix = False
     ## 
     mode = 'SWEEP' # SWEEP or FFT
-    freq_start = 18  #GHz
-    freq_span  = 10.5e+6 #kHz
-    rbw        = 1000 #kHz
+    freq_start = 18e+9  #Hz
+    freq_span  = 8500e+6 #Hz
+    rbw        = 1e+6 #Hz
     meas_time  = None # sec (FFT: measurement time / SWEE: sweep time)
     nAve       = 100 # times (averaging number of measurements = counts)
     nRun       = 1 # times (number of run to be recorded separately)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--mode', dest='mode', type=str, default=mode, help=f'FFT mode or SWEEP mode (default: {mode})')
-    parser.add_argument('-s', '--fstart', dest='freq_start', type=float, default=freq_start, help=f'Start Frequency [GHz] (default: {freq_start})')
-    parser.add_argument('-w', '--fspan', dest='freq_span', type=float, default=freq_span, help=f'Frequency Span [kHz] (default: {freq_span})')
-    parser.add_argument('-r', '--rbw', dest='rbw', type=float, default=rbw, help=f'Resolution Band-Width (RBW) [kHz] (default: {rbw})')
+    parser.add_argument('-s', '--fstart', dest='freq_start', type=float, default=freq_start, help=f'Start Frequency [Hz] (default: {freq_start})')
+    parser.add_argument('-w', '--fspan', dest='freq_span', type=float, default=freq_span, help=f'Frequency Span [Hz] (default: {freq_span})')
+    parser.add_argument('-r', '--rbw', dest='rbw', type=float, default=rbw, help=f'Resolution Band-Width (RBW) [Hz] (default: {rbw})')
     parser.add_argument('-t', '--time', dest='meas_time', type=float, default=meas_time, help=f'Measurement/Sweep time for one count for FFT/SWEEP mode [sec] (default: {meas_time})')
     parser.add_argument('-n', '--nAve', dest='nAve', default=nAve, type=int, help=f'Number of measurement counts which will be averaged (default: {nAve} times)')
     parser.add_argument('-l', '--nRun', dest='nRun', default=nRun, type=int, help=f'Number of runs to be recorded separately (default: {nRun} times)')
     parser.add_argument('-o', '--outdir', default=outdir, help=f'Output directory name (default: {outdir})')
-    parser.add_argument('--noplot', default=False, action='store_true', help=f'Not create plots (default: False)')
+    parser.add_argument('--noplot', default=False, action='store_true', help=f'Create plots (default: False)')
     parser.add_argument('--overwrite', default=False, action='store_true', help=f'Overwrite the output files even if there is the same filename data (default: False)')
     parser.add_argument('--shortconfig', default=False, action='store_true', help=f'Output csv file has short configuration info. (default: False)')
     parser.add_argument('-i', '--ip_address', default=IP_ADDRESS, help=f'IP address of the Anritsu MS2840A signal analyzer (default: {IP_ADDRESS})')
