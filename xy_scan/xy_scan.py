@@ -217,8 +217,12 @@ if __name__ == '__main__':
     #arr3 = np.arange(552,802,50) # rough mesh
     #x = np.hstack([arr1, arr2, arr3])
     #y = np.hstack([arr1, arr2, arr3])
-    x = np.array([412])
-    y = np.arange(5, 805, 50)
+    if args.outdir[-1] == 'X':
+        x = np.array([412])
+        y = np.arange(5, 765, 10)
+    if args.outdir[-1] == 'Y':
+        y = np.array([412])
+        x = np.arange(5, 765, 10)
     x_grid, y_grid = np.meshgrid(x, y) # 2D grid in x-axis / y-axis
     xx = x_grid.reshape(-1) # flatten to 1D array
     yy = y_grid.reshape(-1) # flatten to 1D array
