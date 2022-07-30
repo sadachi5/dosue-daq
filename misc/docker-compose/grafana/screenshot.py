@@ -35,6 +35,7 @@ urls = [
         'http://localhost:3000/d/A7xFebgVz/dosue-y?orgId=1&refresh=10s&from=now-30m&to=now',
         'http://localhost:3000/d/A7xFebgVz/dosue-y?orgId=1&refresh=10s&from=now-1h&to=now',
         'http://localhost:3000/d/A7xFebgVz/dosue-y?orgId=1&refresh=10s&from=now-3h&to=now',
+        'http://localhost:3000/d/A7xFebgVz/dosue-y?orgId=1&refresh=10s&from=1659136800000&to=now',
         ]
 
 # ファイル名接頭辞
@@ -77,7 +78,7 @@ for i, url in enumerate(urls):
   driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
 
   # 処理後一時待機
-  time.sleep(3)
+  time.sleep(2)
 
   # スクリーンショット格納
   filename = f'{folderPath}{i:02d}.png'
