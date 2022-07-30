@@ -28,6 +28,7 @@ services:
         user: 'root'
         volumes:
             - /data2/docker_data/grafana:/var/lib/grafana
+            - ./grafana.ini:/etc/grafana/grafana.ini
         depends_on:
             - influxdb
         environment:

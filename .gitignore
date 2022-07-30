@@ -23,5 +23,12 @@ aho*
 *.dat
 *.npz
 *.out
+*.log
+*.lock
+*.png
+*.pdf
+*.jpg
+*.jpeg
+*.tiff
 \#*
 output/
