@@ -48,8 +48,8 @@ windowSizeWidth = 1200
 
 # ウインドウ高さ指定
 # 初期値: False
-windowSizeHeight = False
-# windowSizeHeight = 1000
+#windowSizeHeight = False
+windowSizeHeight = 1000
 
 # 連番初期値
 shotNum = 0
@@ -70,8 +70,14 @@ for i, url in enumerate(urls):
   WebDriverWait(driver, 15).until(EC.presence_of_all_elements_located)
   
   # ウインドウ幅・高さ指定
-  windowWidth = windowSizeWidth if windowSizeWidth else driver.execute_script('return document.body.scrollWidth;')
-  windowHeight = windowSizeHeight if windowSizeHeight else driver.execute_script('return document.body.scrollHeight;')
+  windowWidth = driver.execute_script('return document.body.scrollWidth;')
+  if windowSizeWidth and (windowWidth<windowSizeWidth):
+      windowWidth = windowSizeWidth
+      pass
+  windowHeight = driver.execute_script('return document.body.scrollHeight;')
+  if windowSizeHeight and (windowHeight < windowSizeHeight):
+      windowHeight = windowSizeHeight
+      pass
   driver.set_window_size(windowWidth, windowHeight)
 
   # スクロール処理
