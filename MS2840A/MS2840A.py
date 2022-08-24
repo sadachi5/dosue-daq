@@ -239,7 +239,7 @@ class MS2840A:
         self.print_error()
         print()
 
-    def fft_setting(self, freq_start, freq_span, rbw, time, step=None, nAve=1, verbose=0):
+    def fft_setting(self, freq_start, freq_span, rbw, time, att=None, step=None, nAve=1, verbose=0):
         self._fftmode = True
         self._w('INST SIGANA')
         if verbose>0 :
@@ -263,6 +263,7 @@ class MS2840A:
         self.band_wid   = rbw # [Hz]
         if step is not None: self.freq_step = step # [Hz]
         if time is not None: self.ana_time = time # [sec]
+        if att is not None: self.att = att # [dB]
         else               : 
             print('MS2840A:fft_setting(): Warning! There is no argument of measurement time for one trace.')
             print('MS2840A:fft_setting(): Warning! --> analysis time is set to AUTO.')
@@ -309,7 +310,7 @@ class MS2840A:
         self.print_error()
         print('MS2840A:print_sweep_setting(): ')
 
-    def sweep_setting(self, freq_start, freq_stop, rbw, time=None, step=None, nAve=1, verbose=0):
+    def sweep_setting(self, freq_start, freq_stop, rbw, time=None, att=None, step=None, nAve=1, verbose=0):
         self._fftmode = False
         self._w('INST SPECT')
         if verbose>0 :
@@ -334,6 +335,7 @@ class MS2840A:
         else : 
             self.sweep_time = time
             pass
+        if att is not None: self.att = att # [dB]
         self.sweep_type = 'OSWeep' # sweep only mode (no FFT)
         self.data_format = 'REAL'
         # Variable setting
@@ -722,6 +724,7 @@ def main(mode='FFT',
         freq_span  = 2500e+3, #Hz
         rbw        = 300, #Hz
         meas_time  = None, # sec
+        att        = None, # dB, None=Auto
         nAve       = 10, # times (number of average for each data)
         nRun       = 10, # times (number of run or saved data)
         outdir='~/data/ms2840a', noplot=False, overwrite=False, shortconfig=False,
@@ -743,7 +746,7 @@ def main(mode='FFT',
         step = 1e+3 # Hz
         # fft setting
         start_time = time.time()
-        ms.fft_setting(freq_start=freq_start, freq_span=freq_span, rbw=rbw, time=meas_time, step=step, nAve=nAve, verbose=verbose+1)
+        ms.fft_setting(freq_start=freq_start, freq_span=freq_span, rbw=rbw, time=meas_time, att=att, step=step, nAve=nAve, verbose=verbose+1)
         stop_time = time.time()
         setting_time = stop_time-start_time
         print(f'Elapsed time for fft_setting() = {setting_time} sec')
@@ -768,7 +771,7 @@ def main(mode='FFT',
         step      = 1000 # Hz
         # fft setting
         start_time = time.time()
-        ms.sweep_setting(freq_start=freq_start, freq_stop=freq_stop, rbw=rbw, time=meas_time, step=step, nAve=nAve, verbose=verbose+1)
+        ms.sweep_setting(freq_start=freq_start, freq_stop=freq_stop, rbw=rbw, time=meas_time, att=att, step=step, nAve=nAve, verbose=verbose+1)
         stop_time = time.time()
         setting_time  = stop_time - start_time
         print(f'Elapsed time for sweep_setting() = {setting_time} sec')
@@ -989,6 +992,7 @@ if __name__ == '__main__':
     parser.add_argument('-w', '--fspan', dest='freq_span', type=float, default=freq_span, help=f'Frequency Span [Hz] (default: {freq_span})')
     parser.add_argument('-r', '--rbw', dest='rbw', type=float, default=rbw, help=f'Resolution Band-Width (RBW) [Hz] (default: {rbw})')
     parser.add_argument('-t', '--time', dest='meas_time', type=float, default=meas_time, help=f'Measurement/Sweep time for one count for FFT/SWEEP mode [sec] (default: {meas_time})')
+    parser.add_argument('-a', '--att', dest='att', type=int, default=None, help=f'Manual attenuation setting [dB] (default: None (auto))')
     parser.add_argument('-n', '--nAve', dest='nAve', default=nAve, type=int, help=f'Number of measurement counts which will be averaged (default: {nAve} times)')
     parser.add_argument('-l', '--nRun', dest='nRun', default=nRun, type=int, help=f'Number of runs to be recorded separately (default: {nRun} times)')
     parser.add_argument('-o', '--outdir', default=outdir, help=f'Output directory name (default: {outdir})')
@@ -1007,6 +1011,7 @@ if __name__ == '__main__':
         freq_span  = args.freq_span,
         rbw        = args.rbw,
         meas_time  = args.meas_time,
+        att        = args.att,
         nAve       = args.nAve,
         nRun       = args.nRun,
         outdir     = args.outdir, 
