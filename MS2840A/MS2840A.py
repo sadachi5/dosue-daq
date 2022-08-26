@@ -17,9 +17,8 @@ IP_ADDRESS = '10.10.10.2'
 PORT = 49153
 TIMEOUT = 600
 
-g_colors = ['tab:blue','tab:orange','tab:green','tab:red','tab:purple',
-        'tab:brown','tab:pink','tab:olive','tab:cyan','tab:gray','red',
-        'royalblue','turquoise','darkolivegreen','magenta','blue','green']*5
+# set colorful lines
+cmap = plt.get_cmap('jet')
 
 class DATA:
     def __init__(self, powDBm, freq_start, freq_span, MesTimePoint, binary_data=None):
@@ -801,8 +800,8 @@ def main(mode='FFT',
         fig, ax = plt.subplots(2,1)
         fig.set_size_inches(6,8)
         for i in range(nResult):
-            ax[0].plot(results[i].freq*1e-9, results[i].powDBm, color=g_colors[i], linewidth=1)
-            ax[1].plot(results[i].freq*1e-9, results[i].amp   , color=g_colors[i], linewidth=1)
+            ax[0].plot(results[i].freq*1e-9, results[i].powDBm, linewidth=1)
+            ax[1].plot(results[i].freq*1e-9, results[i].amp   , linewidth=1)
             pass
         ax[0].set_xlabel('Frequency [GHz]')
         ax[0].set_ylabel('Power [dBm]')
