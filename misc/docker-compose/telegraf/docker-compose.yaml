@@ -14,5 +14,6 @@ services:
             - /home/dosue/software/dosue-daq/misc/docker-compose/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
             - /data/vacuumSensorCC10:/var/log/vacuumSensorCC10:ro
             - /data/lakeshore218:/var/log/lakeshore218:ro
+            - /data/usbrh:/var/log/usbrh:ro
         environment:
             - TZ=Asia/Tokyo
