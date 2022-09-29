@@ -15,7 +15,7 @@ def alphabet2number(alpha):
 def main():
     # use creds to create a client to interact with the Google Drive API
     scope =['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-    creds = ServiceAccountCredentials.from_json_keyfile_name('spreadsheet-access_client-key.json', scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_name('spreadsheet-access_key.json', scope)
     client = gspread.authorize(creds)
     
     # Find a workbook by name and open the first sheet
