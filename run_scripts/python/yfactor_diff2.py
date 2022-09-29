@@ -10,6 +10,7 @@ from matplotlib import pyplot as plt
 cmap = plt.get_cmap('jet')
 
 # start_freq, stop_freq, npoints are only used in OneColumn type
+# return y-factor_dB, y-factor_dB_at_freq, freq
 def read_csv(filename, csvType='Anritsu', start_freq=None, stop_freq=None, npoints=None):
     
     freq = [] # frequency list [GHz]
@@ -137,7 +138,7 @@ def freq_average(data, naverage=100):
     return np.array(data_ave), np.array(data_err)
 
 
-def main(outdir, outname, input1, input2, nRun1=1, nRun2=1):
+def yfactor(outdir, outname, input1, input2, nRun1=1, nRun2=1, verbose=0):
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
         pass
@@ -184,8 +185,10 @@ def main(outdir, outname, input1, input2, nRun1=1, nRun2=1):
 
     n_freq = len(freq_1_ave)
     n_half = (int)(n_freq/2)
-    print(f'y-factor = {power_diff_ave_dB[n_half]} @ {freq_1_ave[n_half]} GHz')
-    print(f'y-factor = {total_power_diff_ave_dB} (averaged power from {freq_min}--{freq_max} GHz excluding 5--6 GHz)')
+    if verbose >= 0:
+        print(f'y-factor = {power_diff_ave_dB[n_half]} @ {freq_1_ave[n_half]} GHz')
+        print(f'y-factor = {total_power_diff_ave_dB} (averaged power from {freq_min}--{freq_max} GHz excluding 5--6 GHz)')
+        pass
 
     plt.rcParams["font.size"] = 16
     plt.rcParams["axes.grid"] = True
@@ -214,7 +217,10 @@ def main(outdir, outname, input1, input2, nRun1=1, nRun2=1):
     ax.set_ylabel('Difference ratio [dB]') #y軸の名前
 
     fig.savefig(f'{outdir}/{outname}')
-    return 0
+    plt.clf()
+    plt.close()
+
+    return total_power_diff_ave_dB, power_diff_ave_dB[n_half], freq_1_ave[n_half]
 
 
 if __name__=='__main__':
@@ -233,7 +239,7 @@ if __name__=='__main__':
         help=f'number of input data files for 77K')
     args = parser.parse_args()
 
-    main(
+    yfactor(
         outdir = args.outdir,
         outname = args.outname,
         input1 = args.input1,
