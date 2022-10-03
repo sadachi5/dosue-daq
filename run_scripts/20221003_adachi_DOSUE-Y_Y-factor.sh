@@ -8,7 +8,7 @@ nRun=10
 LO=230
 #ONLYplot=true
 ONLYplot=false
-prefix="DOSUE-Y_Y-factor"
+prefix="DOSUE-Y_Y-factorScan6"
 #prefix="test"
 
 dateStr=`date +%F`
@@ -22,8 +22,7 @@ if ${ONLYplot} ; then
     curr=`python3 -c "name=\"$file\"; print(name.split(\"_\")[-1].split(\".log\")[0].split('-')[1].split('uA')[0])"`
 else
     index=1
-    exist_files=`ls ${outdir}/data/${prefix}_*.log`
-    indexmax=`python3 ./python/get_file_maxindex.py ${outdir} ${suffix}`
+    indexmax=`python3 ./python/get_file_maxindex.py -d ${outdir} -p ${prefix}`
     index=`expr $indexmax + 1`
 
     echo 'Voltage ? [mV]'
@@ -47,12 +46,13 @@ echo "logfile = ${logfile}"
 
 if ${ONLYplot} ; then
    # plot y-factor
-   python3 ./python/yfactor_diff.py \
+   python3 ./python/yfactor_diff2.py \
        --outdir ${outdir}/figure \
-       --outname ${prefix}_${suffix}_0-0_yfactor.pdf \
-       --input1 ${outdir}/data/${prefix}_${suffix}_300K_0.dat \
-       --input2 ${outdir}/data/${prefix}_${suffix}_77K_0.dat \
-
+       --outname ${prefix}_${suffix}_ave_yfactor.pdf \
+       --input1 ${outdir}/data/${prefix}_${suffix}_300K \
+       --input2 ${outdir}/data/${prefix}_${suffix}_77K \
+       --nRun1 10 \
+       --nRun2 10 
 else
     echo 'Blackbody temperature? [deg.]'
     read temp
@@ -102,11 +102,13 @@ else
         # plot y-factor
         echo "" >> $logfile
         echo "Yfactor" >> $logfile
-        python3 ./python/yfactor_diff.py \
+        python3 ./python/yfactor_diff2.py \
             --outdir ${outdir}/figure \
-            --outname ${prefix}_${suffix}_0-0_yfactor.pdf \
-            --input1 ${outdir}/data/${prefix}_${suffix}_300K_0.dat \
-            --input2 ${outdir}/data/${prefix}_${suffix}_77K_0.dat \
+            --outname ${prefix}_${suffix}_ave_yfactor.pdf \
+            --input1 ${outdir}/data/${prefix}_${suffix}_300K \
+            --input2 ${outdir}/data/${prefix}_${suffix}_77K \
+            --nRun1 10 \
+            --nRun2 10 \
             >> $logfile
         cat $logfile
     fi

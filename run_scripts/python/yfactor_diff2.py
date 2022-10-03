@@ -6,137 +6,7 @@ import csv
 import numpy as np
 from matplotlib import pyplot as plt
 
-# set colorful lines
-cmap = plt.get_cmap('jet')
-
-# start_freq, stop_freq, npoints are only used in OneColumn type
-# return y-factor_dB, y-factor_dB_at_freq, freq
-def read_csv(filename, csvType='Anritsu', start_freq=None, stop_freq=None, npoints=None):
-    
-    freq = [] # frequency list [GHz]
-    power = [] # power list  [mW]
-    
-    f = open(filename, 'r');
-    if csvType=='TwoColumn':
-        fin = list( csv.reader(f, delimiter=' ') )
-    else:
-        fin = list(csv.reader(f))
-    #print(fin)  #リストの中身を出力
-    isData = False
-    
-    if csvType=='Anritsu': # Anritsu : NOTE: only for RMS detection
-        
-        start_freq = 0
-        stop_freq = 0
-        npoints = 0
-        for line in fin:
-            if len(line)==0 : continue
-            first = line[0].strip()
-            # Search for frequency range
-            if first == 'Trace-A':
-                start_freq = int(line[1])
-                stop_freq  = int(line[2])
-                continue
-            # Search for npoints
-            if first == 'RMS':
-                npoints = int(line[1])
-                continue
-            # Search for data starting point (Anritsu: Wave Data)
-            if first.startswith('Wave Data'):
-                isData = True
-                continue
-            # Get data
-            if isData:
-                power.append(10 ** (float(line[0])*0.1)) # dBm --> mW
-                pass
-            pass
-        freq = np.linspace(start_freq,stop_freq,npoints) * 1.e-9 # Hz --> GHz
-            
-    elif csvType=='Keysight' : # Keysight
-        
-        for line in fin:
-            if len(line)==0 : continue
-            # Search for data starting point (Keysight: DATA)
-            #print(f'first = {first}')
-            if first == 'DATA':
-                isData = True
-                continue
-            isData = True # All lines are data
-            # Get data
-            if isData:
-                freq.append( float(line[0]) * 1.e-9 ) # Hz --> GHz
-                power.append(10 ** (float(line[1])*0.1)) # dBm --> mW
-                pass
-            pass
-        
-    elif csvType=='TwoColumn' : # Hz, dBm
-        
-        for line in fin:
-            if len(line)==0 : continue
-            first = line[0].strip()
-            #print(f'first = {first}')
-            if first[0]=='#':
-                # skip line
-                continue
-            # Get data
-            freq.append( float(line[0]) * 1.e-9 ) # Hz --> GHz
-            power.append(10 ** (float(line[1])*0.1)) # dBm --> mW
-            pass
-        
-    elif csvType=='OneColumn' : # dBm
-        
-        for line in fin:
-            if len(line)==0 : continue
-            first = line[0].strip()
-            #print(f'first = {first}')
-            if first[0]=='#':
-                # skip line
-                continue
-            # Get data
-            power.append(10 ** (float(line[0])*0.1)) # dBm --> mW
-            pass
-        if (start_freq is None) or (stop_freq is None) or (npoints is None):
-            print('Error! There is no arguments for frequency information (start_freq, stop_freq, npoints).')
-            print('Error! Please specify them!')
-            return None
-        freq = np.linspace(start_freq,stop_freq,npoints) * 1.e-9 # Hz --> GHz
-        
-        pass
-    
-    return np.array(freq), np.array(power)
-                
-def read_average(filenames, csvType):
-    freq = []
-    power_sum = []
-    for i, _file in enumerate(filenames):
-        _freq, _power = read_csv(f'{_file}', csvType)
-        if i == 0:
-            freq = _freq
-            power_sum = _power
-        else:
-            power_sum += _power
-            pass
-    power_ave = power_sum / len(filenames)
-    return freq, power_ave
-
-def freq_average(data, naverage=100):
-
-    ndata = len(data)
-    npoints = int(ndata/naverage)
-    
-    data_ave = []
-    data_err = []
-    
-    for i in range(npoints):
-        data_subset = data[i*naverage:(i+1)*naverage]
-        average = np.mean(data_subset)
-        average_err = np.std(data_subset)/np.sqrt(naverage) #  = 1/N * sqrt( sum((y-mean)^2))  ( std = sqrt( sum((y-mean)^2) / N) )
-        data_ave.append(average)
-        data_err.append(average_err)
-        pass
-    
-    return np.array(data_ave), np.array(data_err)
-
+from utils import *
 
 def yfactor(outdir, outname, input1, input2, nRun1=1, nRun2=1, verbose=0):
     if not os.path.isdir(outdir):
@@ -202,17 +72,17 @@ def yfactor(outdir, outname, input1, input2, nRun1=1, nRun2=1, verbose=0):
     plt.subplots_adjust(wspace=0.05, hspace=0.2, left=0.10, right=0.95,bottom=0.10, top=0.90)
 
     ax = axs[0]
-    ax.plot(freq_1, power_1, label=f'{label_1}', color='blue', marker='o', markersize=0.5, linestyle='', linewidth=0.)
-    ax.plot(freq_2, power_2, label=f'{label_2}', color='red', marker='o', markersize=0.5, linestyle='', linewidth=0.)
-    ax.plot(freq_1_ave, power_1_ave, label=f'{label_1} rebin', color='blue', marker='', markersize=0.5, linestyle='-', linewidth=2)
-    ax.plot(freq_2_ave, power_2_ave, label=f'{label_2} rebin', color='red', marker='', markersize=0.5, linestyle='-', linewidth=2)
+    ax.plot(freq_1, power_1, label=f'{label_1}', color='red', marker='o', markersize=0.5, linestyle='', linewidth=0.)
+    ax.plot(freq_2, power_2, label=f'{label_2}', color='blue', marker='o', markersize=0.5, linestyle='', linewidth=0.)
+    ax.plot(freq_1_ave, power_1_ave, label=f'{label_1} rebin', color='red', marker='', markersize=0.5, linestyle='-', linewidth=2)
+    ax.plot(freq_2_ave, power_2_ave, label=f'{label_2} rebin', color='blue', marker='', markersize=0.5, linestyle='-', linewidth=2)
     ax.set_xlabel('Frequency [GHz]') #x軸の名前
     ax.set_ylabel('Power [mW]') #y軸の名前
 
     ax = axs[1]
     
-    ax.plot(freq_1, power_diff_dB, label=f'{label_1}/{label_2}', color='blue', marker='o', markersize=0.5, linestyle='', linewidth=0)
-    ax.plot(freq_1_ave, power_diff_ave_dB, label=f'{label_1}/{label_2} rebin', color='blue', marker='', markersize=0.5, linestyle='-', linewidth=2)
+    ax.plot(freq_1, power_diff_dB, label=f'{label_1}/{label_2}', color='red', marker='o', markersize=0.5, linestyle='', linewidth=0)
+    ax.plot(freq_1_ave, power_diff_ave_dB, label=f'{label_1}/{label_2} rebin', color='red', marker='', markersize=0.5, linestyle='-', linewidth=2)
     ax.set_xlabel('Frequency [GHz]') #x軸の名前
     ax.set_ylabel('Difference ratio [dB]') #y軸の名前
 
