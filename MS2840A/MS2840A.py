@@ -786,6 +786,7 @@ def main(mode='FFT',
             pass
         stop_time = time.time()
         run_time  = stop_time - start_time
+        print(f'Start time for sweep_run() = {start_time} sec')
         print(f'Elapsed time for sweep_run() = {run_time} sec')
 
     else :
@@ -890,6 +891,7 @@ def main(mode='FFT',
     # write config
     print(f'Save data to {fconfigpath}')
     time_str = datetime.datetime.fromtimestamp(result.time).strftime('%Y-%m-%d-%H:%M:%S')
+    print(f'start-time: {time_str}')
     fftmode = ms._fftmode
     f = open(fconfigpath, "w")
     f.write(f'filename, {filename}, \n')
