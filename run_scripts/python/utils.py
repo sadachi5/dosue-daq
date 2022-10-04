@@ -6,7 +6,7 @@ import csv
 import numpy as np
 from matplotlib import pyplot as plt
 # set colorful lines
-cmap = plt.get_cmap('jet')
+cmap = plt.get_cmap('tab20')
 
 
 # Import my functions
@@ -121,7 +121,7 @@ def read_csv(filename, csvType='Anritsu', start_freq=None, stop_freq=None, npoin
     return np.array(freq), np.array(power)
                 
 
-def read_average(filenames, csvType):
+def read_average(filenames, csvType='TwoColumn'):
     freq = []
     power_sum = []
     for i, _file in enumerate(filenames):
@@ -135,6 +135,11 @@ def read_average(filenames, csvType):
     power_ave = power_sum / len(filenames)
     return freq, power_ave
 
+def read_average_nRun(
+        filepath, nRun=10, suffix='.dat', csvType='TwoColumn'):
+    file_list = [ f'{filepath}_{i}{suffix}' for i in range(nRun) ]
+    freq, power = read_average(file_list, csvType)
+    return freq, power
 
 def freq_average(data, naverage=100):
 
