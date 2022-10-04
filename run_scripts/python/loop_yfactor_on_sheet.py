@@ -12,7 +12,7 @@ def alphabet2number(alpha):
     row, col = gspread.utils.a1_to_rowcol(f'{alpha}1')
     return col
 
-def main():
+def main(doUpdate=False):
     # use creds to create a client to interact with the Google Drive API
     scope =['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     creds = ServiceAccountCredentials.from_json_keyfile_name('spreadsheet-access_key.json', scope)
@@ -20,7 +20,8 @@ def main():
     
     # Find a workbook by name and open the first sheet
     # Make sure you use the right name here.
-    sheet = client.open("DOSUE-Y_SISmixer_test").sheet1
+    #sheet = client.open("DOSUE-Y_SISmixer_test").sheet1
+    sheet = client.open("DOSUE-Y_SISmixer_test").sheet2
     # Configurations
     col_prefix = 'A'
     col_LO = 'B'
@@ -69,7 +70,8 @@ def main():
             _volt = f'{_volt/100.:.3f}'
             _curr = f'{_curr/10.:.1f}'
             _suffix = f'{_LO}GHz_{_volt}mV-{_curr}uA'
-            _filename = f'{_prefix}_{_suffix}'
+            #_filename = f'{_prefix}_{_suffix}'
+            _filename = f'{_prefix}_1_{_suffix}'
             _outname = f'{_filename}_ave_yfactor.pdf'
             _input1 = f'{input_dir}/{_filename}_300K'
             _input2 = f'{input_dir}/{_filename}_77K'
@@ -98,10 +100,12 @@ def main():
         update3_list[i] = f'{_y:.3f}'
         pass
 
-    print(update1_list)
-    sheet.insert_cols([update1_list], colI_update1)
-    sheet.insert_cols([update2_list], colI_update2)
-    sheet.insert_cols([update3_list], colI_update3)
+    if doUpdate:
+        print(update1_list)
+        sheet.insert_cols([update1_list], colI_update1)
+        sheet.insert_cols([update2_list], colI_update2)
+        sheet.insert_cols([update3_list], colI_update3)
+        pass
     return 0
 
 if __name__ == '__main__':
