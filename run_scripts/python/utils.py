@@ -171,12 +171,30 @@ def freq_cut(freq, power, freq_min=None, freq_max=None):
     return new_freq, new_power
 
 
+def scale2dB(scale):
+    return np.log10( scale ) * 10. # scale --> dB
+
+def dB2scale(dB):
+    return 10.**(dB*0.1) # dB --> scale
+
 def mW2dBm(mW):
-    return np.log10( mW.astype(np.float64) ) * 10. # mW --> dBm
+    return scale2dB( mW.astype(np.float64) ) # mW --> dBm
 
 def dBm2mW(dBm):
-    return 10. ** ( dBm.astype(np.float64) * 0.1 ) # dBm --> mW
-    
+    return dB2scale( dBm.astype(np.float64) ) # dBm --> mW
+
+def Y2Trx(Y, T_300K=290., T_77K=77.3): # Y[scale] --> Trx[K]
+    return (T_300K - Y*T_77K)/(Y-1.)
+
+def YdB2Trx(YdB, T_300K=290., T_77K=77.3): # Y[dB] --> Trx[K]
+    Y = dB2Ratio(YdB)
+    return Y2Trx(Y, T_300K, T_77K)
+
+def deg2rad(deg):
+    return deg*np.pi/180.
+
+def rad2deg(rad):
+    return rad*180./np.pi
 
 def default_figure():
     plt.rcParams["font.size"] = 16
@@ -197,3 +215,17 @@ def default_legend(ax,
             )
     return 0
 
+
+import inspect;
+def get_var_name(var, back_vars=None):
+    name = ''
+    if back_vars==None : 
+        back_vars = inspect.currentframe().f_back.f_globals
+        back_vars.update(inspect.currentframe().f_back.f_globals)
+        pass
+    for k,v in back_vars.items():
+        if id(v) == id(var):
+            name=k
+            pass
+        pass
+    return name
