@@ -262,12 +262,12 @@ class MS2840A:
         self.band_wid   = rbw # [Hz]
         if step is not None: self.freq_step = step # [Hz]
         if time is not None: self.ana_time = time # [sec]
-        if att is not None: self.att = att # [dB]
         else               : 
             print('MS2840A:fft_setting(): Warning! There is no argument of measurement time for one trace.')
             print('MS2840A:fft_setting(): Warning! --> analysis time is set to AUTO.')
             self.is_ana_time_auto = True 
             pass
+        if att is not None: self.att = att # [dB]
         self.freq_start = freq_start # [Hz]
         self.trace_nAve = nAve
 
