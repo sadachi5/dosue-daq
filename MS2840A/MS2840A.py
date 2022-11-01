@@ -726,7 +726,8 @@ def main(mode='FFT',
         att        = None, # dB, None=Auto
         nAve       = 10, # times (number of average for each data)
         nRun       = 10, # times (number of run or saved data)
-        outdir='~/data/ms2840a', noplot=False, overwrite=False, shortconfig=False,
+        outdir='~/data/ms2840a', 
+        noplot=False, overwrite=False, shortconfig=False, nosubdir=False,
         ip_address = IP_ADDRESS,
         filename=None, filename_add_suffix=True, verbose=0):
 
@@ -818,13 +819,24 @@ def main(mode='FFT',
     if not os.path.exists(f'{outdir}'):
         os.mkdir(f'{outdir}')
         pass
-    # make today's folder                                                     
-    today = str(datetime.datetime.now().date())
-    todaydir = f'{outdir}/{today}'
-    if not os.path.exists(todaydir):
-        os.mkdir(f'{todaydir}')
-        os.mkdir(f'{todaydir}/data')
-        os.mkdir(f'{todaydir}/figure')
+    # make today's folder or not
+    if not nosubdir:
+        today = str(datetime.datetime.now().date())
+        todaydir = f'{outdir}/{today}'
+        if not os.path.exists(todaydir):
+            os.mkdir(f'{todaydir}')
+            os.mkdir(f'{todaydir}/data')
+            os.mkdir(f'{todaydir}/figure')
+            pass
+        fdata_dir = f'{todaydir}/data'
+        fbin_dir = f'{todaydir}/data'
+        fconfig_dir = f'{todaydir}/data'
+        ffig_dir = f'{todaydir}/figure'
+    else:
+        fdata_dir = f'{outdir}'
+        fbin_dir = f'{outdir}'
+        fconfig_dir = f'{outdir}'
+        ffig_dir = f'{outdir}'
         pass
 
     # make new file                                                           
@@ -838,7 +850,7 @@ def main(mode='FFT',
     if filename_add_suffix :
         filename += f'_{freq_span*1e-3:.1f}MHz_RBW{rbw:.1f}kHz_{nAve}times_{meas_time}sec'
         pass
-    fdatapaths = np.array([ f'{todaydir}/data/{filename}_{i}.dat' for i in range(nResult) ] if nResult>1 else [f'{todaydir}/data/{filename}.dat'])
+    fdatapaths = np.array([ f'{fdata_dir}/{filename}_{i}.dat' for i in range(nResult) ] if nResult>1 else [f'{fdata_dir}/{filename}.dat'])
     isexists   = np.array([ os.path.exists(path) for path in fdatapaths ])
     if np.any(isexists) :
         print(f'Warning! The filename(={filename}) exists!')
@@ -852,11 +864,11 @@ def main(mode='FFT',
             return 0
         elif _filename == filename: print(f'Warning! The output file ({fdatapaths[isexists]}) is overwriten!')
         filename = _filename
-        fdatapaths = np.array([ f'{todaydir}/data/{filename}_{i}.dat' for i in range(nResult) ] if nResult>1 else [f'{todaydir}/data/{filename}.dat'])
+        fdatapaths = np.array([ f'{fdata_dir}/{filename}_{i}.dat' for i in range(nResult) ] if nResult>1 else [f'{fdata_dir}/{filename}.dat'])
         pass
-    fbinpaths = np.array([ f'{todaydir}/data/{filename}_{i}.pkl' for i in range(nResult) ] if nResult>1 else [f'{todaydir}/data/{filename}.pkl'])
-    fconfigpath = f'{todaydir}/data/{filename}.csv'
-    ffigpath = f'{todaydir}/figure/{filename}.pdf'
+    fbinpaths = np.array([ f'{fbin_dir}/{filename}_{i}.pkl' for i in range(nResult) ] if nResult>1 else [f'{fbin_dir}/{filename}.pkl'])
+    fconfigpath = f'{fconfig_dir}/{filename}.csv'
+    ffigpath = f'{ffig_dir}/{filename}.pdf'
 
     # save figure
     if not noplot:
@@ -975,7 +987,7 @@ def main(mode='FFT',
 if __name__ == '__main__':
 
     # Default settings
-    outdir     = '~/data/ms2840a'
+    outdir     = '/data/ms2840a'
     filename   = None
     filename_add_suffix = False
     ## 
@@ -1000,6 +1012,7 @@ if __name__ == '__main__':
     parser.add_argument('--noplot', default=False, action='store_true', help=f'Create plots (default: False)')
     parser.add_argument('--overwrite', default=False, action='store_true', help=f'Overwrite the output files even if there is the same filename data (default: False)')
     parser.add_argument('--shortconfig', default=False, action='store_true', help=f'Output csv file has short configuration info. (default: False)')
+    parser.add_argument('--nosubdir', default=False, action='store_true', help=f'Do not create any subdirectory under the <outdir> (default: False)')
     parser.add_argument('-i', '--ip_address', default=IP_ADDRESS, help=f'IP address of the Anritsu MS2840A signal analyzer (default: {IP_ADDRESS})')
     parser.add_argument('-f', '--filename', default=filename, help=f'Output filename. If it is None, filename will be asked after measurements. (default: {filename})')
     parser.add_argument('--filename_add_suffix', default=filename_add_suffix, help=f'Add suffix on output filename (default: {filename_add_suffix})')
@@ -1019,6 +1032,7 @@ if __name__ == '__main__':
         noplot     = args.noplot,
         overwrite  = args.overwrite,
         shortconfig= args.shortconfig,
+        nosubdir   = args.nosubdir,
         ip_address = args.ip_address,
         filename   = args.filename,
         filename_add_suffix = args.filename_add_suffix,
