@@ -8,12 +8,19 @@ __pycache__/
 
 # C extensions
 *.so
+*/*.so
 
 # backup files
 ~*
+*/~*
 *.swp
+*/*.swp
 *~
+*/*~
 *#
+*/*#
+.*
+*/.*
 
 # temporary files
 aho*
@@ -21,15 +28,28 @@ aho*
 
 # data files
 *.dat
+*/*.dat
 *.npz
+*/*.npz
 *.out
+*/*.out
 *.log
+*/*.log
 *.lock
+*/*.lock
 *.png
+*/*.png
 *.pdf
+*/*.pdf
 *.jpg
+*/*.jpg
 *.jpeg
+*/*.jpeg
 *.tiff
+*/*.tiff
 \#*
 output/
+*/output/
+*/*/output/
 run_scripts/python/*.json
+thermometer/cal_data

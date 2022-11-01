@@ -128,7 +128,7 @@ if __name__=='__main__':
 
 
     # For 2022/10/21 signal data taking test
-    #'''
+    '''
     outdir = '~/data/ms2840a/dosue-j/test'
     freq_starts = np.arange(14000e+6 - 250e+3, 14001e+6 - 250e+3, 2e+6) # Hz
     freq_spans  = [2.5e+6] # Hz
@@ -141,8 +141,8 @@ if __name__=='__main__':
     #'''
 
     # 本番 22/10/21
-    '''
-    freq_starts = np.arange(14000e+6 - 250e+3, 14100e+6 - 250e+3, 2e+6) # Hz
+    #'''
+    freq_starts = np.arange(14100e+6 - 250e+3, 14200e+6 - 250e+3, 2e+6) # Hz
     freq_spans  = [2.5e+6] # Hz
     rbws = [300] # Hz
     nAves = [1] # times
@@ -155,14 +155,14 @@ if __name__=='__main__':
     nRuns = [12] # times
     #'''
     # Y-factor
-    '''
-    #outdir = '~/data/ms2840a/dosue-j/yfactor_300K_ini' # 300K before measurement
-    outdir = '~/data/ms2840a/dosue-j/yfactor_77K_ini' # 77K before measurement
+    #'''
+    outdir = '~/data/ms2840a/dosue-j/yfactor_300K_ini' # 300K before measurement
+    #outdir = '~/data/ms2840a/dosue-j/yfactor_77K_ini' # 77K before measurement
     #outdir = '~/data/ms2840a/dosue-j/yfactor_300K_fin' # 300K after measurement
     #outdir = '~/data/ms2840a/dosue-j/yfactor_77K_fin' # 77K after measurement
     meas_times = [1] # sec
     nRuns = [1] # times
-    '''
+    #'''
     
     # freq_starts: Hz --> GHz
     print(f'freq_stars [Hz]: {freq_starts}')
