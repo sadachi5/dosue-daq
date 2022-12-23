@@ -230,10 +230,11 @@ class VacuumSensorTPG361(object):
     del self
     pass
   
+  # No longer used
   def wait(self):
-    while True : 
-      if self.ser.inWaiting > 0 : break  ;
-      pass;
+    #while True : 
+    #  if self.ser.inWaiting > 0 : break  ;
+    #  pass;
     pass;
 
   def write(self, command):
