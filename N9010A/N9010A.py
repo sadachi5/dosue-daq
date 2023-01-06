@@ -267,9 +267,9 @@ def main(outdir='~/data/n9010a',
     spa.connect()
 
     spa.freq_start = start #GHz
-    print(f'Start freq: {spa.freq_start} GHz')
+    print(f'Start freq: {spa.freq_start*1e-9} GHz')
     spa.freq_stop = stop #GHz
-    print(f'Stop freq : {spa.freq_stop} GHz')
+    print(f'Stop freq : {spa.freq_stop*1e-9} GHz')
     spa.npoints = npoints #points
     print(f'npoints : {spa.npoints}')
     spa.band = rbw #Hz
