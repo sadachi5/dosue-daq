@@ -15,5 +15,24 @@ services:
             - /data/vacuumSensorCC10:/var/log/vacuumSensorCC10:ro
             - /data/lakeshore218:/var/log/lakeshore218:ro
             - /data/usbrh:/var/log/usbrh:ro
+            - /mnt/cmb-kamo/dosue-pi/data/vacuumSensorTPG361:/var/log/dosue-pi_vacuumSensorTPG361:ro
+            - /mnt/cmb-kamo/dosue-pi/data/lakeshore218:/var/log/dosue-pi_lakeshore218:ro
+            - /mnt/cmb-tandem/data/lakeshore218:/var/log/cmb-tandem/lakeshore218:ro
+            - /mnt/cmb-tandem/data/pumpLeybold:/var/log/cmb-tandem/pumpLeybold:ro
+            - /mnt/cmb-tandem/data/ajariCryoPTC:/var/log/cmb-tandem/ajariCryoPTC:ro
+            #- dosue-pi_data_vacuumSensorTPG361:/var/log/dosue-pi_vacuumSensorTPG361:ro
+            #- dosue-pi_data_lakeshore218:/var/log/dosue-pi_lakeshore218:ro
         environment:
             - TZ=Asia/Tokyo
+
+#volumes:
+#    dosue-pi_data_vacuumSensorTPG361:
+#        driver_opts:
+#            type: nfs
+#            o: "port=2049,addr=192.168.215.17,ro,nfsvers=3"
+#            device: ":/dosue-pi/data/vacuumSensorTPG361"
+#    dosue-pi_data_lakeshore218:
+#        driver_opts:
+#            type: nfs
+#            o: "port=2049,addr=192.168.215.17,ro,nfsvers=3"
+#            device: ":/dosue-pi/data/lakeshore218"
