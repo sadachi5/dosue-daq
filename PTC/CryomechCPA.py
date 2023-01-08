@@ -182,10 +182,15 @@ class CryomechCPA(object) :
     return strReturn
 
   def _combineBytes(self, bytes_list, locs):
-    combine = ''
+    #combine = '' # for python2
+    combine = bytes() # for python3
+    #print(bytes_list, type(bytes_list))
     for loc in locs:
-      combine += bytes_list[loc]
+      #print(loc, type(loc), bytes_list[loc])
+      #combine += bytes_list[loc] # for python2
+      combine += bytes([bytes_list[loc]]) # for python3
       pass
+    print(combine)
     return combine
 
   def _convertRawData(self, rawdata, key, locs):
@@ -225,17 +230,21 @@ class CryomechCPA(object) :
     # 2 x 8-bit lookup tables.
     elif key in ["Model"]:
       model_major = struct.unpack(
-          ">B",  rawdata[locs[0]])[0]
+          #">B",  rawdata[locs[0]])[0] # for python2
+          ">B",  bytes([rawdata[locs[0]]]))[0] # for python3
       model_minor = struct.unpack(
-          ">B", rawdata[locs[1]])[0]
+          #">B",  rawdata[locs[1]])[0] # for python2
+          ">B",  bytes([rawdata[locs[1]]]))[0] # for python3
       # Model is an attribute, not publishable data
       model = str(model_major) + "_" + str(model_minor)
       data = model
     elif key in ["Software_Revision"]:
       version_major = struct.unpack(
-          ">B", rawdata[locs[0]])[0]
+          #">B",  rawdata[locs[0]])[0] # for python2
+          ">B",  bytes([rawdata[locs[0]]]))[0] # for python3
       version_minor = struct.unpack(
-          ">B", rawdata[locs[1]])[0]
+          #">B",  rawdata[locs[1]])[0] # for python2
+          ">B",  bytes([rawdata[locs[1]]]))[0] # for python3
       software_revision = str(version_major) + "." + str(version_minor)
       data = software_revision
  
@@ -303,12 +312,13 @@ class CryomechCPA(object) :
 
   def getPressureUnit(self):
     status = self.getStatus()
-    index = self.keyloc.keys().index('Pressure_Unit')
+    index = [ i for i, key in enumerate(self.keyloc.keys()) if key=='Pressure_Unit'][0]
     return status[index]
 
   def getTemperatureUnit(self):
     status = self.getStatus()
-    index = self.keyloc.keys().index('Temperature_Unit')
+    #print(self.keyloc.keys())
+    index = [ i for i, key in enumerate(self.keyloc.keys()) if key=='Temperature_Unit'][0]
     return status[index]
 
     
