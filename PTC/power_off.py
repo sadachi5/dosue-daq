@@ -69,7 +69,7 @@ def convertRawData(rawdata, key, locs):
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect((host, port))
 
-# Power ON
+# Power OFF
 '''
 query = bytes([0x09, 0x99,  # Message ID
                0x00, 0x00,  # Unused
@@ -79,7 +79,7 @@ query = bytes([0x09, 0x99,  # Message ID
                0x00, 0x01,  # The starting Register Number
                0x00, 0x01]) # How many to read
 '''
-query = b'\x09\x99\x00\x00\x00\x06\x01\x06\x00\x01\x00\x01' # The last 2 bits represent command.
+query = b'\x09\x99\x00\x00\x00\x06\x01\x06\x00\x01\x00\xff' # The last 2 bits represent command.
 client.sendall(query)
 response = client.recv(1024)
 
