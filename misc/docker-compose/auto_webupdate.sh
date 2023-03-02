@@ -1,6 +1,7 @@
 #!/bin/bash
 # data is synchronized automatically to the local directory
 DATALOCATION=/data
+DATALOCATION_TANDEM=/mnt/cmb-tandem/data
 HTMLLOCATION=/home/adachi/hep_web/grafana
 TEMPERATURE_PLOT=/data/analysis/adachi/dosue-analysis/Temperature/figure/temperature_compare.png
 
@@ -35,6 +36,29 @@ TEMPERATURE_PLOT=/data/analysis/adachi/dosue-analysis/Temperature/figure/tempera
 
     ## Temperature plot ##
     rsync -ruavv $TEMPERATURE_PLOT hepsrv:~/hep_web/grafana/temperature.png
+
+
+    # Tandem #
+    ssh hepsrv -C "sed -i \"s%Current values (Update@Tandem:.*)%Current values (Update@Tandem:${now})%\" ${HTMLLOCATION}/${page}"
+    ## Lakeshore 218 ##
+    echo "$DATALOCATION_TANDEM/lakeshore218/data_${date}.dat";
+    vals=`tail -n 1 $DATALOCATION_TANDEM/lakeshore218/data_${date}.dat`
+    echo $vals;
+    vals=`echo ${vals} | awk -F' |:' '{printf("%s %s:%s:%s %s %.3fK %s %.3fK %s %.3fK %s %.4fK %s %.3fK %s %.3fK %s %.3fK %s %.3fK", $2, $3, $4, $5, $6, $7, $9, $10, $12, $13, $15, $16, $18, $19, $21, $22, $24, $25, $27, $28)}'`
+    echo $vals;
+    ssh hepsrv -C "sed -i \"s%Temperature (Tandem Lakeshore 218): .*</li>%Temperature (Tandem Lakeshore 218): <br> ${vals} </li>%\" ${HTMLLOCATION}/${page}"
+ 
+    ## Leybold ##
+    echo "$DATALOCATION_TANDEM/pumpLeybold/data_${date}.dat";
+    vals=`tail -n 1 $DATALOCATION_TANDEM/pumpLeybold/data_${date}.dat`
+    echo $vals;
+    vals=`echo ${vals} | awk -F' |:' '{printf("%s %s:%s:%s %s Pa %s Hz", $2, $3, $4, $5, $7, $11)}'`
+    echo $vals;
+    ssh hepsrv -C "sed -i \"s%Vacuum pressure (Tandem Leybold): .*</li>%Vacuum pressure (Tandem Leybold): <br>${vals} </li>%\" ${HTMLLOCATION}/${page}"
+
+    ## Temperature plot ##
+    rsync -ruavv $TEMPERATURE_PLOT hepsrv:~/hep_web/grafana/temperature.png
+
 
   done
 

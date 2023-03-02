@@ -34,14 +34,6 @@
 # Room temperature & humidity usbrh
 20 */1 * * * /usr/bin/flock -x --timeout 10 /home/dosue/software/dosue-daq/usbrh/cron_usbrh.lock -c ". /home/dosue/venv/env1/bin/activate; python3 /home/dosue/software/dosue-daq/usbrh/run_usbrh.py > /home/dosue/software/dosue-daq/usbrh/run_usbrh.log 2>&1"
 
-# Grafana screenshot
-*/10 * * * * /usr/bin/flock -x --timeout 30 /home/dosue/software/dosue-daq/misc/docker-compose/grafana/cron_GFscreenshot.lock -c ". /home/dosue/venv/env1/bin/activate; cd /home/dosue/software/dosue-daq/misc/docker-compose/grafana; python3 screenshot.py > screenshot.log  2>&1; ./scp-screenshot.sh;"
-
-# Temperature plot
-5 */1 * * * /usr/bin/flock -x --timeout 30 /data/analysis/adachi/dosue-analysis/Temperature/figure/cron_plot.lock -c ". /home/dosue/venv/env1/bin/activate; cd /data/analysis/adachi/dosue-analysis/Temperature; python3 plot_temperature.py --channel_columns temp1 temp2 temp3 temp4 --channel_labels 'CH1 2nd stage' 'CH2 1st stage' 'CH3 Wave-guide @ 40K' 'CH4 2nd stage far' --data_dir '/data/lakeshore218' --data_starts '2022/08/24 08:48' '2022/09/21 17:43' --data_stops '2022/08/25 12:48' '2022/09/30 00:00' --data_labels '5th cooling' '6th cooling (Wt SIS)' --data_linestyles "dashed" "solid" --data_linewidth 2 --xtype 'sec' --grid --logy --figsizeW 16 --figsizeH 4 --outname 'temperature_compare' > figure/plot_temperature.log  2>&1;"
-
-# Hepsrv web updating
-*/1 * * * * /usr/bin/flock -x --timeout 30 /home/dosue/software/dosue-daq/misc/docker-compose/cron_webupdate.lock -c "/home/dosue/software/dosue-daq/misc/docker-compose/auto_webupdate.sh > /home/dosue/software/dosue-daq/misc/docker-compose/webupdate.log  2>&1"
-
 # Crontab backup
 2 3 */1 * * /usr/bin/flock -x --timeout 30 /home/dosue/software/dosue-daq/misc/cron_backup.lock -c "crontab -l > /home/dosue/software/dosue-daq/misc/crontab.txt"
+

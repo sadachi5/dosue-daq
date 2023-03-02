@@ -36,6 +36,8 @@ urls = [
         'http://localhost:3000/d/A7xFebgVz/dosue-y?orgId=1&refresh=10s&from=now-1h&to=now',
         'http://localhost:3000/d/A7xFebgVz/dosue-y?orgId=1&refresh=10s&from=now-3h&to=now',
         'http://localhost:3000/d/A7xFebgVz/dosue-y?orgId=1&from=1663746180000&to=now',
+        'http://localhost:3000/d/3w7HW4h4z/tandem?orgId=1&from=now-3h&to=now',
+        'http://localhost:3000/d/fXdQAzp4z/dosue-pi?orgId=1&from=now-3h&to=now',
         ]
 
 # ファイル名接頭辞
