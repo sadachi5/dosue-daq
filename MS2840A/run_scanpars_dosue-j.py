@@ -1,31 +1,63 @@
 #!/usr/bin/env python
 import os, sys
 import argparse
-
 import numpy as np
 
 import MS2840A
 
 
-
 def run_scanpars(configs, 
         filename_prefix='scan', 
         filename_add_suffix=False, 
-        noplot = True, overwrite=False, shortconfig=True,
-        outdir = '~/data/ms2840a/scan'):
+        noplot=True, overwrite=False, shortconfig=True,
+        nosubdir=True, noRun=False,
+        outdir='~/data/ms2840a/scan'):
 
-    for config in configs:
+    mode0 = None
+    freq_start0 = None
+    freq_span0 = None
+    rbw0 = None
+    meas_time0 = None
+    nAve0 = None
+    nRun0 = None
+    for i, config in enumerate(configs):
         mode = config['mode']
         freq_start = config['freq_start']
         freq_span = config['freq_span']
         rbw = config['rbw']
         meas_time = config['meas_time']
-        print(meas_time, 'sec')
         nAve = config['nAve']
         nRun = config['nRun']
         filename = filename_prefix+f'_{mode}_{freq_start*1e-9:.6f}GHz_span{freq_span*1.e-6:.2f}MHz_rbw{rbw:.0f}Hz_{meas_time:.1f}sec_{nAve:d}counts_{nRun:d}runs'
+
+        if i == 0:
+            ms = None
+            nosetting = False
+        else:
+            ms = ret
+            nosetting = True
+            if mode != mode0: 
+                nosetting = False
+            else:
+                if freq_span != freq_span0: ms.freq_span = freq_span
+                if rbw != rbw0: ms.band_wid = rbw
+                if meas_time != meas_time0: ms.ana_time = meas_time
+                if freq_start != freq_start0: ms.freq_start = freq_start
+                if nAve != nAve0: ms.trace_nAve = nAve
+                ms.print_fft_setting()
+                pass
+            pass
+        mode0 = mode
+        freq_start0 = freq_start
+        freq_span0 = freq_span
+        rbw0 = rbw
+        meas_time0 = meas_time
+        nAve0 = nAve
+        nRun0 = nRun
+
         try:
             ret = MS2840A.main(
+                ms         = ms,
                 mode       = mode, 
                 freq_start = freq_start,
                 freq_span  = freq_span,
@@ -35,10 +67,15 @@ def run_scanpars(configs,
                 nRun       = nRun,
                 outdir     = outdir, 
                 filename   = filename,
+                nosetting  = nosetting,
                 noplot     = noplot,
                 overwrite  = overwrite,
                 shortconfig= shortconfig,
-                filename_add_suffix = filename_add_suffix)
+                nosubdir   = nosubdir,
+                noRun      = noRun,
+                filename_add_suffix = filename_add_suffix,
+                datBinary=True, saveDat=True, savePickle=True,
+                verbose    = 1)
         except Exception as e:
             print(f'run_scanpars(): Error! {e} for {filename}')
             print(f'run_scanpars(): Error! --> skip!')
@@ -123,53 +160,52 @@ if __name__=='__main__':
     shortconfig = True
     run = True
 
+    mode = 'SEARCH'
+    freq_start = 10
+    outdir = 'aho'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-m', '--mode', dest='mode', type=str, default=mode, help=f'SEARCH or Yfactor (default: {mode})')
+    parser.add_argument('-s', '--fstart', dest='freq_start', type=float, default=freq_start, help=f'Start Frequency [GHz] (default: {freq_start})')
+    parser.add_argument('-o', '--outdir', default=outdir, help=f'Output directory name (default: {outdir})')
+    parser.add_argument('--noRun', dest='noRun', action='store_true', default=False, help=f'Only show configurations (Not run measurements)')
+    args = parser.parse_args()
+
+    if args.noRun:
+        run = False
+        pass
+
+    if args.mode == 'SEARCH':
+        nRuns = [12] # times
+        meas_times = [2] # sec
+    elif args.mode == 'YFACTOR':
+        nRuns = [1] # times
+        meas_times = [2] # sec
+    else:
+        print(f'Please choose "SCAN" or "YFACTOR" for mode!')
+        print(f'--> Exit!')
+        sys.exit(1)
+        pass
+
+    freq_start = args.freq_start
+    outdir = args.outdir
+
     # Scan parameters
     modes = ['FFT'] # FFT or SWEEP
-
-
-    # For 2022/10/21 signal data taking test
-    '''
-    outdir = '~/data/ms2840a/dosue-j/test'
-    freq_starts = np.arange(14000e+6 - 250e+3, 14001e+6 - 250e+3, 2e+6) # Hz
-    freq_spans  = [2.5e+6] # Hz
-    rbws = [300] # Hz
-    # meas_times = [2] # sec
-    meas_times = [1] #sec
     nAves = [1] # times
-    # nRuns = [12] # times
-    nRuns = [1] # times
-    #'''
-
-    # 本番 22/10/21
-    #'''
-    freq_starts = np.arange(14100e+6 - 250e+3, 14200e+6 - 250e+3, 2e+6) # Hz
-    freq_spans  = [2.5e+6] # Hz
+    freq_spans  = [int(2.5e+6)] # Hz
     rbws = [300] # Hz
-    nAves = [1] # times
-    #'''
+    startHz = int(freq_start*1e+9) # GHz --> Hz
+    spanHz = int(100*1e+6) # 100MHz
+    edgeHz = int(250e+3) # 250kHz
+    dHz = int(2e+6) # 2MHz
+    freq_starts = np.arange( startHz - edgeHz, startHz + spanHz - edgeHz, dHz ) # Hz
 
-    # Dark photon search
-    '''
-    outdir = '~/data/ms2840a/dosue-j/signal_data'
-    meas_times = [2] # sec
-    nRuns = [12] # times
-    #'''
-    # Y-factor
-    #'''
-    outdir = '~/data/ms2840a/dosue-j/yfactor_300K_ini' # 300K before measurement
-    #outdir = '~/data/ms2840a/dosue-j/yfactor_77K_ini' # 77K before measurement
-    #outdir = '~/data/ms2840a/dosue-j/yfactor_300K_fin' # 300K after measurement
-    #outdir = '~/data/ms2840a/dosue-j/yfactor_77K_fin' # 77K after measurement
-    meas_times = [1] # sec
-    nRuns = [1] # times
-    #'''
-    
     # freq_starts: Hz --> GHz
     print(f'freq_stars [Hz]: {freq_starts}')
-
     configs = np.array(create_configs(modes, freq_starts, freq_spans, rbws, meas_times, nAves, nRuns))
 
     print(f'configs (size={len(configs)}):')
     print(configs)
-    if run: run_scanpars(configs, noplot=noplot, overwrite=overwrite, shortconfig=shortconfig, filename_prefix=filename_prefix, outdir=outdir)
+    run_scanpars(configs, noplot=noplot, overwrite=overwrite, shortconfig=shortconfig, 
+            filename_prefix=filename_prefix, outdir=outdir, noRun=(not run))
     pass
