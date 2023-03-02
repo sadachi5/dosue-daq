@@ -8,6 +8,9 @@ def read_pump(ip = '192.168.11.4', timezone=None):
 
   url = 'http://{}/!cDS'.format(ip)
   html = requests.get(url)
+  # ON : html.text = "0|15|0|5:0,-1;2:0;20:22;4:0,-1;72:3.9e-02;73:0.0e+00;|0,0;50,500|1,0,1,0,0,1,1,1|0|4:0,-1;72:3.9e-02;73:0.0e+00;|0|20"
+  # OFF:              0|15|0|5:0,-1;2:0;20:22;4:0,-1;72:2.1e-01;73:0.0e+00;|0,0;0,0|0,0,1,0,0,0,1,1|0|4:0,-1;72:2.1e-01;73:0.0e+00;|0|20
+  #print(html.text)
   elements = html.text.split('|')
   value = elements[3].split(';')
 
