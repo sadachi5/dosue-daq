@@ -5,21 +5,12 @@
 # FREQ: start frequency [GHz] ex) 10.1
 
 # Frequency check
-if [ ! $# -eq 2 ] && [ ! $# -eq 3 ]; then
-    echo "Please check arguments!"
+if [ $# -lt 2 ]; then
+    echo "Please add arguments!"
     echo "Usage: ./run_dosue-j.sh <PERSON> <FREQ>"
-    echo "       ./run_dosue-j.sh <PERSON> <FREQ> [<ONE_STEP_ONLY>]"
     echo "ex) ./run_dosue-j.sh adachi 10.1"
     echo "PERSON: your name to record who measured this frequency ex) adachi"
     echo "FREQ: start frequency [GHz] ex) 10.1"
-    echo "ONE_STEP_ONLY: 1--5"
-    echo "      If you give a 3rd argument, only one step will be run."
-    echo "      The step numbers are: "
-    echo "          1: run only Y-factor 77K before"
-    echo "          2: run only Y-factor 300K before"
-    echo "          3: run only search measurement"
-    echo "          4: run only Y-factor 300K after"
-    echo "          5: run only Y-factor 77K after"
     exit
 fi
 PERSON=$1
@@ -41,10 +32,10 @@ OPT=''
 #OPT=' --noRun'
 RUN=true
 #RUN=false
-DIR=2023-03
-#DIR=test
 
 source /home/dosue/venv/env1/bin/activate # for python3
+DIR=2023-03
+#DIR=test
 LOG="/data/ms2840a/dosue-j/$DIR.log"
 SEARCH="/data/ms2840a/dosue-j/signal_data/$DIR"
 YFACTOR_300K_BEFORE="/data/ms2840a/dosue-j/yfactor_300K_ini/$DIR" # 300K before measurement

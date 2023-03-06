@@ -73,7 +73,7 @@ def test() :
     #sleep(5)
     #write(soc, '*WAI');
     #print(writeread(soc, '*IDN?'));
-    #'''
+    '''
     print(writeread(soc, 'INST?'))
     print(write(soc, 'INST SIGANA'));
     #write(soc, ':SYSTem:APPLication:LOAD SIGANA')

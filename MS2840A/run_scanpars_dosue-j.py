@@ -21,6 +21,7 @@ def run_scanpars(configs,
     nAve0 = None
     nRun0 = None
     for i, config in enumerate(configs):
+        print(f'########## Starting measurement ({i+1}/{len(configs)}) ##########')
         mode = config['mode']
         freq_start = config['freq_start']
         freq_span = config['freq_span']
@@ -44,7 +45,7 @@ def run_scanpars(configs,
                 if meas_time != meas_time0: ms.ana_time = meas_time
                 if freq_start != freq_start0: ms.freq_start = freq_start
                 if nAve != nAve0: ms.trace_nAve = nAve
-                ms.print_fft_setting()
+                #ms.print_fft_setting()
                 pass
             pass
         mode0 = mode

@@ -68,9 +68,10 @@ class MS2840A:
         if self._connected:
             self.close()
         
-    def _w(self, word):
+    def _w(self, word, sleep=0.05):
         word += '\r\n'
         self._soc.send(word.encode())
+        time.sleep(sleep)
 
     def _r(self, decode=True):
         if decode:
@@ -95,9 +96,9 @@ class MS2840A:
         if self._verbose > 2 : print(f'M2850A:_r(): ret_msg = {ret_msg}')
         return ret_msg.strip() if decode else ret_msg[:-2]
 
-    def _wr(self, word, decode=True):
+    def _wr(self, word, decode=True, sleep=0.05):
         if self._verbose > 2 : print(f'M2850A:_wr(): command = {word}')
-        self._w(word)
+        self._w(word, sleep)
         r = self._r(decode=decode)
         if r is None :
             print(f'MS2840A:_wr(): Error! Failed to read for the command: "{word}"')
@@ -337,7 +338,7 @@ class MS2840A:
         self.freq_start = freq_start # [Hz]
         self.freq_stop  = freq_stop # [Hz]
         self.det_mode = 'RMS' # NORM, POS, NEG, SAMP, RMS
-        self.trace_points = (int)((self.freq_stop-self.freq_start)/self.band_wid)*10 + 1
+        self.trace_points = (int)((self.freq_stop-self.freq_start)/self.band_wid) + 1
         self.trace_nAve = nAve
         self._wait()
 
@@ -788,7 +789,7 @@ def main(ms=None, mode='FFT',
             pass
         stop_time = time.time()
         run_time  = stop_time - start_time
-        print(f'Start time for sweep_run() = {start_time} sec')
+        print(f'Start time for sweep_run(): {datetime.datetime.fromtimestamp(start_time)}')
         print(f'Elapsed time for sweep_run() = {run_time} sec')
 
     else :
@@ -989,6 +990,16 @@ def main(ms=None, mode='FFT',
                 f.write(f'nep-100kHz{i}, {nepsEvery100kHz[i]:e}, W/sqrt(Hz)\n')
                 f.write(f'min{i}, {mins[i]:e}, W\n')
                 f.write(f'max{i}, {maxs[i]:e}, W\n')
+                pass
+            pass
+        f.close()
+
+        # Print config file
+        if verbose >= 0:
+            f = open(fconfigpath, "r")
+            for l in f.readlines():
+                #print(f'{filename}.csv: {l}', end='')
+                print(f'config file(.csv): {l}', end='')
                 pass
             pass
         pass # End of if not noRun
