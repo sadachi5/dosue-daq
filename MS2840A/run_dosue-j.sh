@@ -68,18 +68,23 @@ if [ ! -d ${YFACTOR_77K_AFTER} ]; then
     mkdir ${YFACTOR_77K_AFTER}
 fi
 
-CHECK=`python3 check_exist_data.py $FREQ $SEARCH`
 echo $CHECK
-# Check overlapping of frequency range
-if [ -n "$CHECK" ]; then
-    echo "There is overlapped data for frequency=${FREQ} in ${SEARCH}!"
-    echo "Please check <FREQ> argument and data directory!"
-    echo "If you really want to proceed to measurements, please enter 'Y'."
-    read YN
-    if [ ! "$YN" == "Y" ]; then
-        exit
+
+function check_exit_data() {
+    DIR0=$1
+    CHECK=`python3 check_exist_data.py $FREQ $DIR0`
+    # Check overlapping of frequency range
+    if [ -n "$CHECK" ]; then
+        echo "There is overlapped data for frequency=${FREQ} in ${DIR0}!"
+        echo "Please check <FREQ> argument and data directory!"
+        echo "If you really want to proceed to measurements, please enter 'Y'."
+        read YN
+        if [ ! "$YN" == "Y" ]; then
+            exit
+        fi
     fi
-fi
+    return 0
+}
 
 # Initialize log file
 if [ ! -f ${LOG} ]; then
@@ -87,12 +92,13 @@ if [ ! -f ${LOG} ]; then
     echo "# freq[GHz], person, starttime, 300K_temp_before, 300K_temp_after, endtime" >> $LOG
 fi
 
-# Measurements (Y-factor & Search & Y-factor)
-starttime=`date +%Y-%m-%d-%H:%M:%S`
-echo -n "$FREQ, $PERSON, $starttime, " >> $LOG
-
 # 1. Y-factor 77K before
 if [ $ONE_STEP_ONLY -eq 0 ] || [ $ONE_STEP_ONLY -eq 1 ]; then
+    # Measurements (Y-factor & Search & Y-factor)
+    starttime=`date +%Y-%m-%d-%H:%M:%S`
+    echo -n "$FREQ, $PERSON, $starttime, " >> $LOG
+
+    check_exit_data $YFACTOR_77K_BEFORE
     echo
     echo '########## Y-factor 77K before ##########'
     echo 'Please enter if you prepare for the LN2.'
@@ -105,14 +111,16 @@ if [ $ONE_STEP_ONLY -eq 0 ] || [ $ONE_STEP_ONLY -eq 1 ]; then
     fi
     echo '########## End of Y-factor 77K before ##########'
     echo
+
+    ./beep.sh
 fi
-./beep.sh
 
 # 2. Y-factor 300K before
 if [ $ONE_STEP_ONLY -eq 0 ] || [ $ONE_STEP_ONLY -eq 2 ]; then
+    check_exit_data $YFACTOR_300K_BEFORE
     echo
     echo '########## Y-factor 300K before ##########'
-    echo 'What is the temperature of the 300K eccosorb?'
+    echo 'How much is the temperature of the 300K eccosorb? (before 300K measurement)'
     read temp_before
     echo -n "$temp_before, " >> $LOG
     echo 'Please enter if you prepare for the 300K measurement.'
@@ -125,13 +133,17 @@ if [ $ONE_STEP_ONLY -eq 0 ] || [ $ONE_STEP_ONLY -eq 2 ]; then
     fi
     echo '########## End of Y-factor 300K before ##########'
     echo
-else
-    echo -n ", " >> $LOG
+
+    ./beep.sh
+
+    echo 'How much is the temperature of the 300K eccosorb (after 300K measurement)?'
+    read temp_before
+    echo -n "$temp_before, " >> $LOG
 fi
-./beep.sh
 
 # 3. Search measurement
 if [ $ONE_STEP_ONLY -eq 0 ] || [ $ONE_STEP_ONLY -eq 3 ]; then
+    check_exit_data $SEARCH
     echo
     echo '########## Search ##########'
     echo 'Please enter if you are ready.'
@@ -144,14 +156,16 @@ if [ $ONE_STEP_ONLY -eq 0 ] || [ $ONE_STEP_ONLY -eq 3 ]; then
     fi
     echo '########## End of search ##########'
     echo
+
+    ./beep.sh
 fi
-./beep.sh
 
 # 4. Y-factor 300K after
 if [ $ONE_STEP_ONLY -eq 0 ] || [ $ONE_STEP_ONLY -eq 4 ]; then
+    check_exit_data $YFACTOR_300K_AFTER
     echo
     echo '########## Y-factor 300K after ##########'
-    echo 'What is the temperature of the 300K eccosorb?'
+    echo 'How much is the temperature of the 300K eccosorb?'
     read temp_after
     echo -n "$temp_after, " >> $LOG
     echo 'Please enter if you prepare for the 300K measurement.'
@@ -164,13 +178,13 @@ if [ $ONE_STEP_ONLY -eq 0 ] || [ $ONE_STEP_ONLY -eq 4 ]; then
     fi
     echo '########## End of Y-factor 300K after ##########'
     echo
-else
-    echo -n ", " >> $LOG
+
+    ./beep.sh
 fi
-./beep.sh
 
 # Y-factor 77K after
 if [ $ONE_STEP_ONLY -eq 0 ] || [ $ONE_STEP_ONLY -eq 5 ]; then
+    check_exit_data $YFACTOR_77K_AFTER
     echo
     echo '########## Y-factor 77K after ##########'
     echo 'Please enter if you prepare for the LN2.'
@@ -183,11 +197,12 @@ if [ $ONE_STEP_ONLY -eq 0 ] || [ $ONE_STEP_ONLY -eq 5 ]; then
     fi
     echo '########## End of Y-factor 77K after ##########'
     echo
-fi
-./beep.sh
 
-endtime=`date +%Y-%m-%d-%H:%M:%S`
-echo "${endtime}" >> $LOG
+    ./beep.sh
+
+    endtime=`date +%Y-%m-%d-%H:%M:%S`
+    echo "${endtime}" >> $LOG
+fi
 
 echo ""
 echo "END for ${FREQ} GHz!"

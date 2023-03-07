@@ -37,8 +37,8 @@ if [ $# -gt 2 ]; then
 fi
 
 # For test
-OPT=''
-#OPT=' --noRun'
+#OPT=''
+OPT=' --noRun'
 RUN=true
 #RUN=false
 #DIR=2023-03
@@ -120,7 +120,7 @@ if [ $ONE_STEP_ONLY -eq 0 ] || [ $ONE_STEP_ONLY -eq 2 ]; then
     check_exit_data $YFACTOR_300K_BEFORE
     echo
     echo '########## Y-factor 300K before ##########'
-    echo 'What is the temperature of the 300K eccosorb?'
+    echo 'How much is the temperature of the 300K eccosorb? (before 300K measurement)'
     read temp_before
     echo -n "$temp_before, " >> $LOG
     echo 'Please enter if you prepare for the 300K measurement.'
@@ -135,6 +135,10 @@ if [ $ONE_STEP_ONLY -eq 0 ] || [ $ONE_STEP_ONLY -eq 2 ]; then
     echo
 
     ./beep.sh
+
+    echo 'How much is the temperature of the 300K eccosorb (after 300K measurement)?'
+    read temp_before
+    echo -n "$temp_before, " >> $LOG
 fi
 
 # 3. Search measurement
@@ -161,7 +165,7 @@ if [ $ONE_STEP_ONLY -eq 0 ] || [ $ONE_STEP_ONLY -eq 4 ]; then
     check_exit_data $YFACTOR_300K_AFTER
     echo
     echo '########## Y-factor 300K after ##########'
-    echo 'What is the temperature of the 300K eccosorb?'
+    echo 'How much is the temperature of the 300K eccosorb?'
     read temp_after
     echo -n "$temp_after, " >> $LOG
     echo 'Please enter if you prepare for the 300K measurement.'
