@@ -89,7 +89,7 @@ function check_exit_data() {
 # Initialize log file
 if [ ! -f ${LOG} ]; then
     echo "Create a log file"
-    echo "# freq[GHz], person, starttime, 300K_temp_before, 300K_temp_after, endtime" >> $LOG
+    echo "# freq[GHz], person, starttime, 300K_temp_before, 300K_temp_before2, 300K_temp_after, 300K_temp_after2, endtime" >> $LOG
 fi
 
 # 1. Y-factor 77K before
@@ -180,6 +180,10 @@ if [ $ONE_STEP_ONLY -eq 0 ] || [ $ONE_STEP_ONLY -eq 4 ]; then
     echo
 
     ./beep.sh
+
+    echo 'How much is the temperature of the 300K eccosorb (after 300K measurement)?'
+    read temp_before
+    echo -n "$temp_before, " >> $LOG
 fi
 
 # Y-factor 77K after
