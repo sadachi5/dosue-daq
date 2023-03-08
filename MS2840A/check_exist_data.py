@@ -14,8 +14,12 @@ def check_exist_data(freq_start_GHz, path):
     existfiles = np.sort(os.listdir(path))
     overlapped = False
     for ef in existfiles:
-        _start_GHz = float(ef.split('_')[2][:-3]) # scan_FFT_10.075750GHz_span2.50MHz_rbw300Hz_2.0sec_1counts_1runs.csv
-        _start_Hz = int(_start_GHz * 1e+9)
+        try:
+            _start_GHz = float(ef.split('_')[2][:-3]) # scan_FFT_10.075750GHz_span2.50MHz_rbw300Hz_2.0sec_1counts_1runs.csv
+            _start_Hz = int(_start_GHz * 1e+9)
+        except Exception:
+            print(f'{ef} is not expected file name to check frequency. -> skip checking')
+            continue
         if _start_Hz in check_freq_starts:
             print(f'There is overlapped frequency! freq_start = {_start_GHz:.6f} GHz / check_freq_start = {freq_start_GHz} GHz')
             overlapped = True

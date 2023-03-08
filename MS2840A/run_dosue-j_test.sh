@@ -39,8 +39,8 @@ fi
 # For test
 #OPT=''
 OPT=' --noRun'
-RUN=true
-#RUN=false
+#RUN=true
+RUN=false
 #DIR=2023-03
 DIR=test
 
@@ -68,12 +68,12 @@ if [ ! -d ${YFACTOR_77K_AFTER} ]; then
     mkdir ${YFACTOR_77K_AFTER}
 fi
 
-echo $CHECK
 
 function check_exit_data() {
     DIR0=$1
     CHECK=`python3 check_exist_data.py $FREQ $DIR0`
     # Check overlapping of frequency range
+    echo $CHECK
     if [ -n "$CHECK" ]; then
         echo "There is overlapped data for frequency=${FREQ} in ${DIR0}!"
         echo "Please check <FREQ> argument and data directory!"
