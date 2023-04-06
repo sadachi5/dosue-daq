@@ -159,7 +159,7 @@ def main(onoff = False, # True:ON, False:OFF
     if power_dBm is not None and power_W is None:
         sg.power = power_dBm
     elif power_W is not None and power_dBm is None:
-        sg.power_W = power_dBm
+        sg.power_W = power_W
     elif power_W is not None and power_dBm is not None:
         print('main(): WARNING! One of power_W or power_dBm should be specified!')
         print('main(): power_dBm = {power_dBm}, power_W = {power_W}')
