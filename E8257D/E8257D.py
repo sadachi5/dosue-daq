@@ -134,12 +134,12 @@ class E8257D:
 
     @property
     def power_W(self) :
-        dBm =  float(self._wr('POW:REF?')) # [W]
+        dBm =  float(self._wr('POW?')) # [W]
         return 1.0e-3*(10.**(dBm*0.1)) # dBm --> W
     @power_W.setter
     def power_W(self, W): # [W]
-        dBm = np.log10(W*1.0e-3)*10. # W --> dBm
-        self._w(f'POW:REF {dBm}DBM')
+        dBm = np.log10(W*1.0e+3)*10. # W --> dBm
+        self._w(f'POW {dBm}DBM')
 
 
 def main(onoff = False, # True:ON, False:OFF
@@ -159,6 +159,7 @@ def main(onoff = False, # True:ON, False:OFF
     if power_dBm is not None and power_W is None:
         sg.power = power_dBm
     elif power_W is not None and power_dBm is None:
+        print(f'power_W = {power_W}')
         sg.power_W = power_W
     elif power_W is not None and power_dBm is not None:
         print('main(): WARNING! One of power_W or power_dBm should be specified!')
@@ -189,7 +190,7 @@ def main(onoff = False, # True:ON, False:OFF
 if __name__ == '__main__':
     # Default settings
     freq = 20.e+9  # Hz
-    dBm  = -20. # dBm
+    dBm  = None # dBm
     W = None # W
 
     parser = argparse.ArgumentParser()
