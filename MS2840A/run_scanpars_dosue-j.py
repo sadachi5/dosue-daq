@@ -164,11 +164,16 @@ if __name__=='__main__':
     mode = 'SEARCH'
     freq_start = 10
     outdir = 'aho'
+    nRun_search = 12
+    scan_span = 100*1e+6
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--mode', dest='mode', type=str, default=mode, help=f'SEARCH or Yfactor (default: {mode})')
     parser.add_argument('-s', '--fstart', dest='freq_start', type=float, default=freq_start, help=f'Start Frequency [GHz] (default: {freq_start})')
     parser.add_argument('-o', '--outdir', default=outdir, help=f'Output directory name (default: {outdir})')
     parser.add_argument('--noRun', dest='noRun', action='store_true', default=False, help=f'Only show configurations (Not run measurements)')
+    # options for additional measurements
+    parser.add_argument('--nRun-search', dest='nRun_search', type=int, default=nRun_search, help=f'# of runs for each band in search (default: {nRun_search})')
+    parser.add_argument('--scan-span', dest='scan_span', type=float, default=scan_span, help=f'Frequency span in one scan [Hz] (default: {scan_span})')
     args = parser.parse_args()
 
     if args.noRun:
@@ -176,7 +181,7 @@ if __name__=='__main__':
         pass
 
     if args.mode == 'SEARCH':
-        nRuns = [12] # times
+        nRuns = [args.nRun_search] # times
         meas_times = [2] # sec
     elif args.mode == 'YFACTOR':
         nRuns = [1] # times
@@ -196,7 +201,7 @@ if __name__=='__main__':
     freq_spans  = [int(2.5e+6)] # Hz
     rbws = [300] # Hz
     startHz = int(freq_start*1e+9) # GHz --> Hz
-    spanHz = int(100*1e+6) # 100MHz
+    spanHz = int(args.scan_span) # 100MHz
     edgeHz = int(250e+3) # 250kHz
     dHz = int(2e+6) # 2MHz
     freq_starts = np.arange( startHz - edgeHz, startHz + spanHz - edgeHz, dHz ) # Hz

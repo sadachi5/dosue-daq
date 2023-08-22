@@ -33,7 +33,9 @@ def main(dt=10):
             pass
             
         # Open a new file
+        #print(f)
         if f is None:
+            print('Open new file')
             f = openfile(outputfilename)
             openStr = now.strftime('%Y/%m/%d %H:%M:%S (Unix time)');
             line   = '# unix-time {} '.format(openStr);

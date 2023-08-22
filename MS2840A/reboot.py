@@ -13,6 +13,7 @@ PORT = 49153
 def write(soc,word:str):
     word += '\r\n'
     soc.send(word.encode())
+    sleep(0.1)
     return 0;
 
 def read(soc):

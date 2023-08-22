@@ -7,12 +7,13 @@ import matplotlib.pyplot as plt
 import os, sys
 import datetime
 
-IP_ADDRESS = '192.168.215.247'
+IP_ADDRESS = '10.10.10.2'
 PORT = 49153
 
 def write(soc,word:str):
     word += '\r\n'
     soc.send(word.encode())
+    sleep(0.1)
     return 0;
 
 def read(soc):
@@ -58,8 +59,11 @@ def read_data(soc):
 
 
 def test() :
+    print('initialize socket')
     soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
+    print('connect')
     soc.connect((IP_ADDRESS, PORT))
+    print('set timeout')
     soc.settimeout(10)
 
     #print('Error before reset');

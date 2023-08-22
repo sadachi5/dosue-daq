@@ -32,7 +32,8 @@ Zoom, Absolute            100 (0%)        100 - 400
 Adjusting resolution from 384x288 to 352x288.
 """
 
-nTimes = -1; # # of loop, -1: continue forever
+#nTimes = -1; # # of loop, -1: continue forever
+nTimes = 1; # # of loop, -1: continue forever
 sleeptime  = 10; # sec
 width = 1920/2;
 height= 1080/2;

@@ -36,13 +36,17 @@ if [ $# -gt 2 ]; then
     ONE_STEP_ONLY=$3
 fi
 
+OPT=' --nRun-search 600 --scan-span 2.0e+6'
 # For test
-#OPT=''
-OPT=' --noRun'
+#OPT=' --noRun --nRun-search 600 --scan-span 2.0e+6'
+
 RUN=true
+# For test
 #RUN=false
-DIR=2023-04-06_test
-#DIR=test
+
+DIR=2023-04-06
+# For test
+#DIR=2023-04-06_test
 
 source /home/dosue/venv/env1/bin/activate # for python3
 LOG="/data/ms2840a/dosue-j/$DIR.log"
