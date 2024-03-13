@@ -4,8 +4,9 @@ import subprocess;
 import datetime;
 import time;
 import shutil;
+import argparse
 
-outdir0    = '/data/webcam'
+outdir0    = '/home/dosue/data/webcam'
 dev_webcam = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_4C3C897E-video-index0';
 
 # default setting
@@ -38,17 +39,17 @@ sleeptime  = 10; # sec
 width = 1920/2;
 height= 1080/2;
 delay      =   0; #  option of fswebcam
-frame      =  30; #  option of fswebcam
+frame      =  10; #  option of fswebcam
 rotate     =   0; #  option(rotate) of fswebcam degrees
 brightness = 128; #  0--255(default 128)
 contrast   = 128; #  0--255(        128)
-saturation = 180; #  0--255(        180)
+saturation = 128; #  0--255(        180)
 redbalance =  32; # 24--40 (         32)
 bluebalance=  32; # 24--40 (         32)
 gamma      =  20; #  0--40 (         20)
 sharpness  = 120; #  0--255(        120) 
 focusmode  = True # Focus, Auto   True or False( True)
-focus      = 28; #Focus (absolute)  0--255
+focus      =   0; #Focus (absolute)  0--255
 zoom       = 100; # Zoom, Absolute 100--400
 
 latestfilename = 'latest.jpg';
@@ -74,13 +75,20 @@ def getpicture(outdir='.', outname='aho.png') :
 
 
 if __name__ == '__main__':
-    updateOnlyLatest = True;
-    if len(sys.argv) > 1 :
-        updateOnlyLatest = (int)(sys.argv[1]);
-        pass;
-    if len(sys.argv) > 2 :
-        focus = (int)(sys.argv[2]);
-        pass;
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-u', '--update', dest='updateOnlyLatest', default=1, type=int, help=f'(default: 1)')
+    parser.add_argument('-f', '--focus', dest='focus', default=-1, type=int, help=f'(default: -1)')
+    args = parser.parse_args()
+
+    updateOnlyLatest = args.updateOnlyLatest
+    if args.focus >= 0:
+        focusmode = False
+        focus = args.focus
+    else:
+        focusmode = True
+        pass
+
     i = 0
     if nTimes < 0:
         i_max = 99
@@ -102,7 +110,7 @@ if __name__ == '__main__':
               os.mkdir(outdir);
               pass;
           outname = '{}.jpg'.format( nowStr );
-          print('time : {}'.format(nowStr));
+          print('time : {} --> copy file'.format(nowStr));
           shutil.copy2( '{}/{}'.format(outdir0,latestfilename), '{}/{}'.format(outdir,outname) );
           pass;
  
