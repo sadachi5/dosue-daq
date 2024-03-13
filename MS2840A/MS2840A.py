@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 plt.ioff()
 
-IP_ADDRESS = '10.10.10.2'
+IP_ADDRESS = '192.168.215.81'
 PORT = 49153
 TIMEOUT = 600
 
