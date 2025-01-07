@@ -16,6 +16,7 @@ IP_ADDRESS = '192.168.215.113'
 PORT = 5025
 outt = 300
 DATA_FORMAT='REAL,64' # 'REAL,64'
+SLEEP=0.2
 
 class spa_data:
     def __init__(self, freq, powDBm, MesTimePoint):
@@ -114,6 +115,11 @@ class N9010A:
             self._soc.close()
             self._connected = False
 
+    def single(self):
+        self._w('INIT:CONT 0')
+        self._w('TRAC:TYPE AVER')
+        self._w('*WAI')
+
     def decode_data(self, rawbin, verbose=0):
         nchar = (int)(rawbin[1:2].decode())
         if verbose>1: print(f'N9010A:decode_data(): nchar = {nchar}')
@@ -125,19 +131,23 @@ class N9010A:
         else:
             print('N9010A:decode_data(): ERROR! There is no data format of "{DATA_FORMAT}"!')
             pass
-        data = struct.unpack(unpack_format, rawbin[2+nchar:])
         if verbose>1: 
             print(f'N9010A:decode_data(): nbinary = {nbinary}')
             print(f'N9010A:decode_data(): binary data length = {len(rawbin[2+nchar:])}')
             print(f'N9010A:decode_data(): unpack format = {unpack_format}')
+            pass
+        data = struct.unpack(unpack_format, rawbin[2+nchar:])
+        if verbose>1: 
             print(f'N9010A:decode_data(): data = {data}')
             pass
         return data
 
     def read_data(self) -> spa_data:
         ut = time.time()
+        self.single()
         rawstr = self._wr('READ:SAN?', decode=False)
-        rawstr = self.decode_data(rawstr)
+        sleep(SLEEP)
+        rawstr = self.decode_data(rawstr, verbose=0)
         data = np.array([float(ns) for ns in rawstr])
         return spa_data(data[::2], data[1::2], ut)
 
@@ -177,24 +187,24 @@ class N9010A:
         return float(self._wr('FREQ:STAR?'))
 
     @freq_start.setter
-    def freq_start(self, freq_GHz:float):
-        self._w(f'FREQ:STAR {freq_GHz} GHz')
+    def freq_start(self, freq_Hz:float):
+        self._w(f'FREQ:STAR {freq_Hz} Hz')
 
     @property
     def freq_stop(self) -> float:
         return float(self._wr('FREQ:STOP?'))
 
     @freq_stop.setter
-    def freq_stop(self, freq_GHz:float):
-        self._w(f'FREQ:STOP {freq_GHz} GHz')
+    def freq_stop(self, freq_Hz:float):
+        self._w(f'FREQ:STOP {freq_Hz} Hz')
 
     @property
     def band_wid(self) -> float:
         return float(self._wr('BWID:RES?'))
 
     @band_wid.setter
-    def band_wid(self, wid_MHz:float):
-        self._w(f'BWID:RES {wid_MHz} MHz')
+    def band_wid(self, wid_Hz:float):
+        self._w(f'BWID:RES {wid_Hz} Hz')
 
     @property
     def aver_coun(self) -> int:
@@ -203,6 +213,14 @@ class N9010A:
     @aver_coun.setter
     def aver_coun(self,count:int):
         self._w(f'AVER:COUN {count}')
+
+    @property
+    def aver_type(self) -> str:
+        return str(self._wr('AVER:TYPE?'))
+
+    @aver_type.setter
+    def aver_type(self,ave_type:str):
+        self._w(f'AVER:TYPE {ave_type}')
 
     @property
     def is_continuous(self) -> bool:
@@ -255,8 +273,8 @@ class N9010A:
     
 def main(outdir='~/data/n9010a', 
          mode = 'SWEEP',
-         start = 19.999995, #GHz
-         stop = 20.000005, #GHz
+         start = 19999995000, #Hz
+         stop = 20000005000, #Hz
          rbw = 300, # Hz
          npoints = 0, # points
          nAve = 1, # counts
@@ -266,10 +284,10 @@ def main(outdir='~/data/n9010a',
     spa = N9010A(host_ip = ip_address, sweep_mode = mode)
     spa.connect()
 
-    spa.freq_start = start #GHz
-    print(f'Start freq: {spa.freq_start*1e-9} GHz')
-    spa.freq_stop = stop #GHz
-    print(f'Stop freq : {spa.freq_stop*1e-9} GHz')
+    spa.freq_start = start #Hz
+    print(f'Start freq: {spa.freq_start} Hz ({spa.freq_start*1e-9} GHz)')
+    spa.freq_stop = stop #Hz
+    print(f'Stop freq : {spa.freq_stop} Hz ({spa.freq_stop*1e-9} GHz)')
     spa.npoints = npoints #points
     print(f'npoints : {spa.npoints}')
     spa.band = rbw #Hz
@@ -284,13 +302,15 @@ def main(outdir='~/data/n9010a',
     #spa.det_mode = 'NORM'
     print(f'Detection Mode : {spa.det_mode}')
 
+    spa.aver_type = 'RMS'
+    print(f'Averaging Type : {spa.aver_type}')
     
     start_time = time.time()
     result = spa.read_data()
     stop_time = time.time()
     print(f'Elapsed time for read_data() = {stop_time-start_time} sec')
     fig, ax = plt.subplots()
-    ax.plot(result.freq/1.e9, result.powDBm)
+    ax.plot(result.freq*1.e-9, result.powDBm)
     ax.set_xlabel('Freq [GHz]')
     ax.set_ylabel('dBm')
     ax.grid()
@@ -359,16 +379,16 @@ if __name__ == '__main__':
     filename=None
 
     mode = 'SWEEP' # or 'FFT'
-    freq_start = 19.99995
-    freq_span  = 10.
-    rbw = 300.
+    freq_start = 19999950000
+    freq_span  = 100e+3
+    rbw = 300
     npoints = 10001
     nAve = 1
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--mode', dest='mode', type=str, default=mode, help=f'Sweep mode [SWEEP or FFT] (default: {mode})')
-    parser.add_argument('-s', '--fstart', dest='freq_start', type=float, default=freq_start, help=f'Start Frequency [GHz] (default: {freq_start})')
-    parser.add_argument('-w', '--fspan', dest='freq_span', type=float, default=freq_span, help=f'Frequency Span [kHz] (default: {freq_span})')
+    parser.add_argument('-s', '--fstart', dest='freq_start', type=float, default=freq_start, help=f'Start Frequency [Hz] (default: {freq_start})')
+    parser.add_argument('-w', '--fspan', dest='freq_span', type=float, default=freq_span, help=f'Frequency Span [Hz] (default: {freq_span})')
     parser.add_argument('-r', '--rbw', dest='rbw', type=float, default=rbw, help=f'Resolution Band-Width (RBW) [Hz] (default: {rbw})')
     parser.add_argument('-p', '--npoints', dest='npoints', default=npoints, type=int, help=f'Number of frequency points (default: {npoints} points)')
     parser.add_argument('-n', '--nAve', dest='nAve', default=nAve, type=int, help=f'Number of measurement counts which will be averaged (default: {nAve} times)')
@@ -381,8 +401,8 @@ if __name__ == '__main__':
 
     main(outdir = args.outdir, 
          mode = args.mode,
-         start = args.freq_start, #GHz
-         stop = args.freq_start + args.freq_span*1.e-6, #GHz
+         start = args.freq_start, #Hz
+         stop = args.freq_start + args.freq_span, #Hz
          rbw = args.rbw, # Hz
          npoints = args.npoints, # points
          nAve = args.nAve, # counts
