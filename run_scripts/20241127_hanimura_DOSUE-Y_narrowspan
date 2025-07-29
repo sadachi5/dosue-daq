@@ -1,0 +1,5 @@
+# DOSUE-Y IF test at 4K
+. /home/dosue/venv/env1/bin/activate
+suffix=$1
+
+python3 ../MS2840A/MS2840A.py -f DOSUE-Y_test_SWEEP_$1 -m 'SWEEP' -s 5.5e9 -w 10e6 -r 6.5e+9 -n 30 --att 0 --nRun 1 --overwrite

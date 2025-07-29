@@ -5,7 +5,8 @@ import datetime;
 this_dir = os.path.dirname(os.path.abspath(__file__))
 run_script = '{}/pumpLeybold_getdata.py'.format(this_dir);
 outdirectory = '/data/pumpLeybold';
-devlocation = '192.168.11.4'; # Leybold pump system
+#devlocation = '192.168.11.4'; # Leybold pump system
+devlocation = '192.168.215.221'; # Leybold pump system from 2025/7/7 @ tandem for JSAT
 dt = 10; # data aqcuisition period [sec]
 
 if __name__ == '__main__':

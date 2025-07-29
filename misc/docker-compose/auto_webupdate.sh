@@ -34,9 +34,13 @@ TEMPERATURE_PLOT=/data/analysis/adachi/dosue-analysis/Temperature/figure/tempera
     echo $vals;
     ssh hepsrv -C "sed -i \"s%Vacuum pressure (CC-10): .*</li>%Vacuum pressure (CC-10): <br>${vals} </li>%\" ${HTMLLOCATION}/${page}"
 
-    ## Temperature plot ##
-    rsync -ruavv $TEMPERATURE_PLOT hepsrv:~/hep_web/grafana/temperature.png
-
+    ## TPG361_SN44879560 ##
+    echo "$DATALOCATION/vacuumSensorTPG361_SN44879560/data_${date}.dat";
+    vals=`tail -n 1 $DATALOCATION/vacuumSensorTPG361_SN44879560/data_${date}.dat`
+    echo $vals;
+    vals=`echo ${vals} | awk -F' |:' '{printf("%s %s:%s:%s %sPa", $2, $3, $4, $5, $7)}'`
+    echo $vals;
+    ssh hepsrv -C "sed -i \"s%Vacuum pressure (TPG361_SN44879560): .*</li>%Vacuum pressure (TPG361_SN44879560): <br>${vals} </li>%\" ${HTMLLOCATION}/${page}"
 
     # Tandem #
     ssh hepsrv -C "sed -i \"s%Current values (Update@Tandem:.*)%Current values (Update@Tandem:${now})%\" ${HTMLLOCATION}/${page}"

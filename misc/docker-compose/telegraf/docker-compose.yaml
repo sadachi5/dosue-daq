@@ -19,7 +19,7 @@ services:
             - /mnt/cmb-kamo/dosue-pi/data/vacuumSensorTPG361:/var/log/dosue-pi_vacuumSensorTPG361:ro
             - /mnt/cmb-kamo/dosue-pi/data/lakeshore218:/var/log/dosue-pi_lakeshore218:ro
             #- /mnt/cmb-tandem/data/lakeshore218:/var/log/cmb-tandem/lakeshore218:ro
-            #- /mnt/cmb-tandem/data/pumpLeybold:/var/log/cmb-tandem/pumpLeybold:ro
+            - /data/pumpLeybold:/var/log/cmb-tandem/pumpLeybold:ro
             #- /mnt/cmb-tandem/data/ajariCryoPTC:/var/log/cmb-tandem/ajariCryoPTC:ro
             #- dosue-pi_data_vacuumSensorTPG361:/var/log/dosue-pi_vacuumSensorTPG361:ro
             #- dosue-pi_data_lakeshore218:/var/log/dosue-pi_lakeshore218:ro

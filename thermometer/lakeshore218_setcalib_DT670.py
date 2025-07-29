@@ -14,11 +14,11 @@ import lakeshore;
          
 devlocation  = '/dev/ttyLS218';
 
-thermometer_name = 'D6121829'
-calibcurvefilename = 'cal_data/D6121829/D6121829.dat';
+thermometer_name = 'D6077262'
+calibcurvefilename = 'cal_data/DT-670-CU-1.4L_D6077262/D6077262.dat'
 skip_lines = 3 # skip header lines
 
-channel = 1; # channel number for calibration
+channel = 8; # channel number for calibration
 curve = (int)('2{}'.format(channel))
 # dataformat for LS372: 3=ohm/K (linear), 4=log(ohm)/K(linear), 7=ohm/K (cubic spline)
 # dataformat for LS218: 2=V/K, 3=ohm/K, 4=log(ohm)/K

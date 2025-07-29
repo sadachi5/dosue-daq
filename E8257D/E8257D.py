@@ -10,7 +10,8 @@ import time
 import socket
 import numpy as np
 
-IP_ADDRESS = '192.168.215.113'
+#IP_ADDRESS = '192.168.215.113'
+IP_ADDRESS = '10.10.10.3'
 PORT = 5025
 TIMEOUT = 10
 

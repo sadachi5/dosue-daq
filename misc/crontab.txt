@@ -23,7 +23,14 @@
 # m h  dom mon dow   command
 
 # backup data to cmb-kamo (NAS)
-15 1 1 * * . /home/dosue/misc/backup_script/backup.sh
+#*/1 20 27 * * /usr/bin/flock -x --timeout 3600 /home/dosue/misc/backup_script/cron_backup.lock -c ". /home/dosue/misc/backup_script/backup.sh" 2>&1>& /home/dosue/misc/backup_script/cron_backup.log
+42 20 27 * * /usr/bin/flock -x --timeout 3600 /home/dosue/misc/backup_script/cron_backup.lock -c ". /home/dosue/misc/backup_script/backup.sh"
+
+# Vacuum sensor TPG-361
+*/1 * * * * /usr/bin/flock -x --timeout 10 /home/dosue/software/dosue-daq/vacuumSensor/cron_TPG361.lock -c ". /home/dosue/venv/env1/bin/activate; python3 /home/dosue/software/dosue-daq/vacuumSensor/run_vacuumSensorTPG361_getdata.py > /home/dosue/software/dosue-daq/vacuumSensor/run_TPG361.log 2>&1"
+
+# Vacuum sensor Leybold
+*/1 * * * * /usr/bin/flock -x --timeout 10 /home/dosue/software/dosue-daq/pumpLeybold/cron_pumpLeybold.lock -c ". /home/dosue/venv/env1/bin/activate; python3 /home/dosue/software/dosue-daq/pumpLeybold/run_pumpLeybold_getdata.py > /home/dosue/software/dosue-daq/pumpLeybold/run_pumpLeybold.log 2>&1"
 
 # Vacuum sensor CC-10
 */1 * * * * /usr/bin/flock -x --timeout 10 /home/dosue/software/dosue-daq/vacuumSensor/cron_CC10.lock -c ". /home/dosue/venv/env1/bin/activate; python3 /home/dosue/software/dosue-daq/vacuumSensor/run_vacuumSensorCC10_getdata.py > /home/dosue/software/dosue-daq/vacuumSensor/run_CC10.log 2>&1"

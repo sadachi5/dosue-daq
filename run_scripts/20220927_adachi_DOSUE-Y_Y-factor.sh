@@ -1,4 +1,5 @@
 # DOSUE-Y SIS test at 4K
+
 start="3e+9"
 width="10e+9"
 rbw="10e+6"
@@ -46,25 +47,25 @@ else
 
     echo "Is it OK and prepared for 300K measurement? [y/n]"
     read YN
-    
+
     if [ $YN = "y" ]; then
-    
+
         echo 'Start 300K measurement'
         python3 ../MS2840A/MS2840A.py -f ${prefix}_${suffix}_300K -m 'SWEEP' -s $start -w $width -r $rbw -n ${nLoop} --att 0 --nRun ${nRun}
-    
+
         echo "Did you prepared for 77K measurement? [Please push enter!]"
-        read 
-    
+        read
+
         python3 ../MS2840A/MS2840A.py -f ${prefix}_${suffix}_77K -m 'SWEEP' -s $start -w $width -r $rbw -n ${nLoop} --att 0 --nRun ${nRun}
-    
+
         echo 'After Voltage ? [mV]'
         read volt2
         echo 'After Current ? [mV]'
         read curr2
-     
+
         volt2=`python -c "print(f'{$volt2/100.:.3f}')"`
         curr2=`python -c "print(f'{$curr2/10.:.1f}')"`
-     
+
         echo "filename_300K: ${prefix}_${suffix}_300K" > $logfile
         echo "filename_77K: ${prefix}_${suffix}_77K" > $logfile
         echo "LO: ${LO} GHz + 0.3 GHz" >> $logfile
@@ -80,7 +81,7 @@ else
         echo "RBW: ${rbw} Hz" >> $logfile
         echo "nLoop: ${nLoop}" >> $logfile
         echo "nRun: ${nRun}" >> $logfile
-    
+
         # plot y-factor
         echo "" >> $logfile
         echo "Yfactor" >> $logfile
@@ -93,4 +94,3 @@ else
         cat $logfile
     fi
 fi
-
