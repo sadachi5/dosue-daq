@@ -12,7 +12,9 @@ import argparse
 import struct
 
 
-IP_ADDRESS = '192.168.215.113'
+#IP_ADDRESS = '192.168.215.113'
+IP_ADDRESS = '192.168.0.3'
+#IP_ADDRESS = '10.10.10.4'
 PORT = 5025
 outt = 300
 DATA_FORMAT='REAL,64' # 'REAL,64'

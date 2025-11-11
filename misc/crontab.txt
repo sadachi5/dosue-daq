@@ -29,6 +29,9 @@
 # Vacuum sensor TPG-361
 */1 * * * * /usr/bin/flock -x --timeout 10 /home/dosue/software/dosue-daq/vacuumSensor/cron_TPG361.lock -c ". /home/dosue/venv/env1/bin/activate; python3 /home/dosue/software/dosue-daq/vacuumSensor/run_vacuumSensorTPG361_getdata.py > /home/dosue/software/dosue-daq/vacuumSensor/run_TPG361.log 2>&1"
 
+# Vacuum sensor 2nd TPG-361
+*/1 * * * * /usr/bin/flock -x --timeout 10 /home/dosue/software/dosue-daq/vacuumSensor/cron_TPG361-2.lock -c ". /home/dosue/venv/env1/bin/activate; python3 /home/dosue/software/dosue-daq/vacuumSensor/run_vacuumSensorTPG361-2_getdata.py > /home/dosue/software/dosue-daq/vacuumSensor/run_TPG361-2.log 2>&1"
+
 # Vacuum sensor Leybold
 */1 * * * * /usr/bin/flock -x --timeout 10 /home/dosue/software/dosue-daq/pumpLeybold/cron_pumpLeybold.lock -c ". /home/dosue/venv/env1/bin/activate; python3 /home/dosue/software/dosue-daq/pumpLeybold/run_pumpLeybold_getdata.py > /home/dosue/software/dosue-daq/pumpLeybold/run_pumpLeybold.log 2>&1"
 
@@ -43,7 +46,7 @@
 * * * * * /usr/bin/flock -x --timeout 10 /home/dosue/software/dosue-daq/usbrh/cron_usbrh.lock -c ". /home/dosue/venv/env1/bin/activate; python3 /home/dosue/software/dosue-daq/usbrh/run_usbrh.py > /home/dosue/software/dosue-daq/usbrh/run_usbrh.log 2>&1"
 
 # Webcam
-#*/1 * * * * /home/dosue/software/dosue-daq/webcam/runwebcam_getpicture.sh
+*/1 * * * * /home/dosue/software/dosue-daq/webcam/runwebcam_getpicture.sh
 
 # Crontab backup
 2 3 */1 * * /usr/bin/flock -x --timeout 30 /home/dosue/software/dosue-daq/misc/cron_backup.lock -c "crontab -l > /home/dosue/software/dosue-daq/misc/crontab.txt"

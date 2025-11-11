@@ -14,6 +14,7 @@ services:
             - /home/dosue/software/dosue-daq/misc/docker-compose/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
             - /data/vacuumSensorCC10:/var/log/vacuumSensorCC10:ro
             - /data/vacuumSensorTPG361_SN44879560:/var/log/vacuumSensorTPG361_560:ro
+            - /data/vacuumSensorTPG361_SN44870285:/var/log/vacuumSensorTPG361_285:ro
             - /data/lakeshore218:/var/log/lakeshore218:ro
             - /data/usbrh:/var/log/usbrh:ro
             - /mnt/cmb-kamo/dosue-pi/data/vacuumSensorTPG361:/var/log/dosue-pi_vacuumSensorTPG361:ro
