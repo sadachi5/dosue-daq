@@ -112,6 +112,30 @@ class N9010A:
             pass
         self._soc.settimeout(10)
 
+    def setting(self, freq_start, freq_span, rbw, 
+            npoints, nAve, verbose=0):
+        self.freq_start = freq_start #Hz
+        self.freq_stop = freq_start + freq_selfn #Hz
+        self.npoints = npoints #points
+        self.band = rbw #Hz
+        self.aver_coun = nAve
+
+        self.det_mode = 'AVERage'
+        #self.det_mode = 'NORM'
+
+        self.aver_type = 'RMS'
+ 
+        if verbose > 0:
+            print(f'Start freq: {self.freq_start} Hz ({self.freq_start*1e-9} GHz)')
+            print(f'Stop freq : {self.freq_stop} Hz ({self.freq_stop*1e-9} GHz)')
+            print(f'npoints : {self.npoints}')
+            print(f'Band Width : {self.band} Hz')
+            print(f'Sweep Time : {self.time} s')
+            print(f'Average Count : {self.aver_coun}')
+            print(f'Detection Mode : {self.det_mode}')
+            print(f'Averaging Type : {self.aver_type}')
+
+
     def close(self):
         if self._connected:
             self._soc.close()

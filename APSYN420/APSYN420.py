@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# APSYN420 cannot select the output power strength.
 import os, sys
 import argparse
 import datetime
@@ -139,21 +140,21 @@ class APSYN420:
         self._wr('ROSC:LOCK?')
 
     # Power
-    @property
-    def power(self) :
-        return float(self._wr('POW?')) # [dBm]
-    @power.setter
-    def power(self, power_dB): # [dBm]
-        self._w(f'POW {power_dB}')
+    #@property
+    #def power(self) :
+    #    return float(self._wr('POW?')) # [dBm]
+    #@power.setter
+    #def power(self, power_dB): # [dBm]
+    #    self._w(f'POW {power_dB}')
 
-    @property
-    def power_W(self) :
-        dBm =  float(self._wr('POW?')) # [W]
-        return 1.0e-3*(10.**(dBm*0.1)) # dBm --> W
-    @power_W.setter
-    def power_W(self, W): # [W]
-        dBm = np.log10(W*1.0e+3)*10. # W --> dBm
-        self._w(f'POW {dBm}')
+    #@property
+    #def power_W(self) :
+    #    dBm =  float(self._wr('POW?')) # [W]
+    #    return 1.0e-3*(10.**(dBm*0.1)) # dBm --> W
+    #@power_W.setter
+    #def power_W(self, W): # [W]
+    #    dBm = np.log10(W*1.0e+3)*10. # W --> dBm
+    #    self._w(f'POW {dBm}')
 
 '''
     # Phase default 0 rad !!!!!!!!!!!!!!!here!!!!!!!!!!!!!!!!!!!
@@ -220,10 +221,10 @@ if __name__ == '__main__':
     parser.add_argument('--on', action='store_true', default=False, help=f'Power ON (NOTE: Must select --on or --off)')
     parser.add_argument('--off', action='store_true', default=False, help=f'Power OFF (NOTE: Must select --on or --off)')
     parser.add_argument('-f', '--freq', dest='freq', type=float, default=freq, help=f'Frequency [Hz] (default: {freq})')
-    parser.add_argument('-p', '--power_dBm', dest='power_dBm', type=float, default=dBm,
-                        help=f'RF power [dBm] NOTE:One of power_dBm or power_W should be specified. (default: {dBm})')
-    parser.add_argument('-W', '--power_W', dest='power_W', type=float, default=W,
-                        help=f'RF power [W] NOTE:One of power_dBm or power_W should be specified. (default: {W})')
+    #parser.add_argument('-p', '--power_dBm', dest='power_dBm', type=float, default=dBm,
+    #                    help=f'RF power [dBm] NOTE:One of power_dBm or power_W should be specified. (default: {dBm})')
+    #parser.add_argument('-W', '--power_W', dest='power_W', type=float, default=W,
+    #                    help=f'RF power [W] NOTE:One of power_dBm or power_W should be specified. (default: {W})')
     parser.add_argument('-i', '--ip_address', default=IP_ADDRESS, help=f'IP address of the AnaPico APSYN420 signal generator (default: {IP_ADDRESS})')
     parser.add_argument('--power', default=PORT, help=f'LAN Port of the AnaPico APSYN420 signal generator (default: {PORT})')
     parser.add_argument('-v', '--verbose', dest='verbose', default=0, type=int, help=f'Print out verbosity (default: 0)')
