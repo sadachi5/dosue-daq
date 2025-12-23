@@ -84,7 +84,7 @@ def read_data(soc):
 # 処理：data配列から奇数番目と偶数番目の要素を取り出し、２つの別々の配列としてdata[::2]、data[1::2]に格納。
 
 
-def test(freq) :
+def test(freq=20e+9) :
     soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
     soc.connect((IP_ADDRESS, PORT))
     soc.settimeout(10)

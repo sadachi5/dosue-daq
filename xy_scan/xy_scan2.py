@@ -21,13 +21,13 @@ from APSYN420.APSYN420 import APSYN420 as SG
 
 # Network Configuration
 SPA_IP_ADDRESS = '10.10.10.11'
-SG_IP_ADDRESS = '10.10.10.2'
-DEVFILE = '/dev/ttyUSB0' # actuator controller openbuilds blackbox
+SG_IP_ADDRESS = '10.10.10.5'
+DEVFILE = '/dev/ttyUSB1' # actuator controller openbuilds blackbox
 
 # RF/LO Configuration
 RECEIVER_LO = 34e+9 # Hz
 SG_MULTIPLIER = 3 # Number of multiplier after the SG
-SG_POWER = None # dBm # Anapico cannot select the power.
+#SG_POWER = None # dBm # Anapico cannot select the power.
 
 # Actuator Configuration
 ACTUATOR_XMAX = 750
@@ -119,21 +119,21 @@ class XYscan:
         # write data to a dat file
         self._print(f'Save data to {filename}.dat', 1)
         band_wid = self.spa.band_wid
-        trace_nAve = self.spa.trace_nAve
+        # trace_nAve = self.spa.trace_nAve
         f = open(f'{filename}.dat', "w")
         f.write("#RBW = " + str(band_wid) + " [Hz]" + "\n")
-        f.write("#count = " + str(trace_nAve) + "\n")
+        # f.write("#count = " + str(trace_nAve) + "\n")
         f.write("#Frequency[Hz] Power[dBm]" + "\n")
         for i in range(len(result.freq)):
             f.write(str(result.freq[i]) + " " + str(result.powDBm[i]) + "\n")
             pass
         f.close()
         # write data to a pickel file
-        self._print(f'Save data to {filename}.pkl', 1)
-        band_wid = self.spa.band_wid
-        f = open(f'{filename}.pkl', 'wb')
-        pickle.dump(result.binary_data, f)
-        f.close()
+        #self._print(f'Save data to {filename}.pkl', 1)
+        #band_wid = self.spa.band_wid
+        #f = open(f'{filename}.pkl', 'wb')
+        #pickle.dump(result.binary_data, f)
+        #f.close()
         return True
 
     # Measure at each (x,y) point
@@ -142,26 +142,26 @@ class XYscan:
         self.sg.powerOFF()
         time.sleep(self.sleep)
         # Measure the Spectrum
-        result = self.spa.fft_run(verbose=self.verbose)
+        result = self.spa.read_data()
         self._writedata(result, f'{outfile}_OFF1')
 
         # Signal Generator ON
         self.sg.powerON()
         time.sleep(self.sleep)
         # Measure the Spectrum 1
-        result = self.spa.fft_run(verbose=self.verbose)
+        result = self.spa.read_data()
         self._writedata(result, f'{outfile}_ON1')
         time.sleep(self.sleep)
         # Measure the Spectrum 2
-        result = self.spa.fft_run(verbose=self.verbose)
-        self._writedata(result, f'{outfile}_ON2')
+        #result = self.spa.read_data()
+        #self._writedata(result, f'{outfile}_ON2')
 
         # Signal Generator OFF
-        self.sg.powerOFF()
-        time.sleep(self.sleep)
+        #self.sg.powerOFF()
+        #time.sleep(self.sleep)
         # Measure the Spectrum
-        result = self.spa.fft_run(verbose=self.verbose)
-        self._writedata(result, f'{outfile}_OFF2')
+        #result = self.spa.read_data()
+        #self._writedata(result, f'{outfile}_OFF2')
         
         return True
 
@@ -174,7 +174,7 @@ class XYscan:
  
 
 if __name__ == '__main__':
-    outdir = '/DATA/dosue/Q-band/beam_pattern/test/xy_scan2'
+    outdir = '/DATA/dosue/Q-band/beam_pattern/test/xy_testX'
     freq = 39e+9 # Hz
     verbose = 0
 
@@ -182,17 +182,18 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', dest='verbose', type=int, default=verbose, help=f'verbosity level (default: {verbose})')
     parser.add_argument('-o', '--outdir', default=outdir, help=f'Output directory name (default: {outdir})')
     parser.add_argument('-f', '--freq', default=freq, type=int, help=f'Frequency [Hz] (default: {freq})')
+    parser.add_argument('--test', default=False, action='store_true' , help=f'Test run (only checking connection) (default: False)')
     args = parser.parse_args()
 
     # Frequency Setting
     freq = int(args.freq) # Hz
     freq_GHz = freq * 1.e-9 # GHz
     freq_IF = freq - RECEIVER_LO # Hz
-    freq_span = 10.0e+3 # Hz
-    rbw = 300 # Hz
+    freq_span = 1.0e+5 # Hz
+    rbw = 5.0e+2 # Hz
     # meas_time = 1 # sec # NOT USED FOR N9010A
     npoints = 10001 # NOT USED FOR MS2840A
-    nAve = 1 # Number of average for each data
+    nAve = 2 # Number of average for each data
 
     # Actuator Setup
     speedrate = 0.5
@@ -238,8 +239,8 @@ if __name__ == '__main__':
     #print(f'power = {sg.power_W} [W]')
 
     # Create a scan xy list
-    #x = np.arange(2, 752 + 50, 50) # start, stop+step, step (0<=x<=750) [mm]
-    #y = np.arange(2, 752 + 50, 50) # start, stop+step, step (0<=y<=750) [mm]
+    x = np.arange(100, 700 + 100, 100) # start, stop+step, step (0<=x<=750) [mm]
+    y = np.arange(100, 700 + 100, 100) # start, stop+step, step (0<=y<=750) [mm]
     #x = np.linspace(2,752,3) # start, stop, # of division (0<=x<=750) [mm]
     #y = np.linspace(2,752,3) # start, stop, # of division (0<=y<=750) [mm]
     #arr1 = np.arange(2,302,50)   # rough mesh
@@ -248,11 +249,14 @@ if __name__ == '__main__':
     #x = np.hstack([arr1, arr2, arr3])
     #y = np.hstack([arr1, arr2, arr3])
     if args.outdir[-1] == 'X':
-        x = np.array([412]) # x = 412 mm only
-        y = np.arange(5, 755, 10) # y = 5, 10,..., 750 mm
-    if args.outdir[-1] == 'Y':
-        y = np.array([412]) # y = 412 mm only
-        x = np.arange(5, 755, 10) # x = 5, 10,..., 750 mm
+        x = np.array([300]) # x = 412 mm only
+        y = np.arange(450, 600, 50) # y = 5, 10,..., 750 mm
+    elif args.outdir[-1] == 'Y':
+        y = np.array([0]) # y = 412 mm only
+        x = np.arange(5, 605, 10) # x = 5, 10,..., 750 mm
+    #else:
+    #    print("ERROR: outdir must end with 'X' or 'Y'")
+    #    sys.exit(1)
     x_grid, y_grid = np.meshgrid(x, y) # 2D grid in x-axis / y-axis
     xx = x_grid.reshape(-1) # flatten to 1D array
     yy = y_grid.reshape(-1) # flatten to 1D array
@@ -264,7 +268,8 @@ if __name__ == '__main__':
     print(f'xy-scan (size: {len(xy_list)}) = {xy_list}')
 
     xyscan = XYscan(xy_list, act=act, spa=spa, sg=sg, speedrate=speedrate)
-    xyscan.run_scan(outdir=args.outdir)
+    if not args.test:
+        xyscan.run_scan(outdir=args.outdir)
     print(f'Finish XY-scan!')
 
     del act

@@ -115,7 +115,7 @@ class N9010A:
     def setting(self, freq_start, freq_span, rbw, 
             npoints, nAve, verbose=0):
         self.freq_start = freq_start #Hz
-        self.freq_stop = freq_start + freq_selfn #Hz
+        self.freq_stop = freq_start + freq_span #Hz
         self.npoints = npoints #points
         self.band = rbw #Hz
         self.aver_coun = nAve
