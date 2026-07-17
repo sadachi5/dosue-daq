@@ -158,6 +158,7 @@ class MS2840A:
         self._soc.connect((self._host_ip, self._port))
         self._soc.settimeout(self._timeout)
         self.default_setting()
+        self._connected = True
 
     def close(self):
         if self._connected:
