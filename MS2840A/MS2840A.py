@@ -13,7 +13,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 plt.ioff()
 
-#IP_ADDRESS = '192.168.215.81'
 IP_ADDRESS = '10.10.10.2'
 PORT = 49153
 TIMEOUT = 600
@@ -68,7 +67,7 @@ class MS2840A:
     def __del__(self):
         if self._connected:
             self.close()
-
+        
     def _w(self, word, sleep=0.05):
         word += '\r\n'
         self._soc.send(word.encode())
@@ -80,11 +79,13 @@ class MS2840A:
             end     = '\r\n'
         else :
             ret_msg = b''
-            end     = b'\r\n'
+            data_end = None
             pass
         while True:
             try:
                 rcvmsg = self._soc.recv(1024)
+                if not rcvmsg:
+                    raise ConnectionError('Connection closed by peer')
                 if self._verbose > 2 : print(f'M2850A:_r(): raw rcvmsg = {rcvmsg}')
                 if decode: rcvmsg = rcvmsg.decode()
             except Exception as e:
@@ -92,10 +93,20 @@ class MS2840A:
                 print(f'MS2840A:_r(): Error! --> Close socket connection!')
                 return None
             ret_msg += rcvmsg
-            if rcvmsg[-2] == end[0] and rcvmsg[-1] == end[1] :
-                break
+            if decode:
+                if ret_msg.endswith(end):
+                    break
+            else:
+                if data_end is None and len(ret_msg) >= 2:
+                    nchar = int(ret_msg[1:2])
+                    header_end = 2 + nchar
+                    if len(ret_msg) >= header_end:
+                        nbytes = int(ret_msg[2:header_end])
+                        data_end = header_end + nbytes
+                if data_end is not None and len(ret_msg) >= data_end + 2:
+                    break
         if self._verbose > 2 : print(f'M2850A:_r(): ret_msg = {ret_msg}')
-        return ret_msg.strip() if decode else ret_msg[:-2]
+        return ret_msg.strip() if decode else ret_msg[:data_end]
 
     def _wr(self, word, decode=True, sleep=0.05):
         if self._verbose > 2 : print(f'M2850A:_wr(): command = {word}')
@@ -112,6 +123,9 @@ class MS2840A:
     def _wait(self):
         self._w('*WAI')
 
+    def _opc(self):
+        return self._wr('*OPC?')
+
     def print_status(self):
         print('MS2840A:print_status(): Device identification =', self._wr('*IDN?'))
         print('MS2840A:print_status(): System Error =', self._wr('SYST:ERR?'))
@@ -122,7 +136,7 @@ class MS2840A:
         print('MS2840A:print_status(): INST:SYST Spectrum Analyzer =', self._wr('INST:SYST? SPECT'))
         print('MS2840A:print_status(): INST =', self._wr('INST?'))
         print('MS2840A:print_status(): Binary order =', self.binary_order)
-
+        
     def print_error(self):
         print('MS2840A:print_error(): System Error =', self._wr('SYST:ERR?'))
 
@@ -150,27 +164,32 @@ class MS2840A:
         self.data_format = 'REAL'
         self.binary_order = 'NORM'
         self.print_error()
-        self._wait()
+        self._opc()
 
     def connect(self):
         if self._connected:
             raise Exception("Already connected.")
         self._soc.connect((self._host_ip, self._port))
+        self._connected = True
         self._soc.settimeout(self._timeout)
         self.default_setting()
-        self._connected = True
 
     def close(self):
         if self._connected:
             self._soc.close()
             self._connected = False
 
+    def reconnect(self):
+        self.close()
+        self._soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.connect()
+
     def decode_data(self, rawbin):
         nchar = (int)(rawbin[1:2].decode())
         if self._verbose > 2: print(f'MS2840A:decode_data(): nchar = {nchar}')
         nbinary = (int)((int)(rawbin[2:2+nchar].decode())/4)
         unpack_format = '>'+'f'*nbinary
-        if self._verbose > 2:
+        if self._verbose > 2: 
             print(f'MS2840A:decode_data(): nbinary = {nbinary}')
             print(f'MS2840A:decode_data(): binary data length = {len(rawbin[2+nchar:])}')
             print(f'MS2840A:decode_data(): unpack format = {unpack_format}')
@@ -181,15 +200,18 @@ class MS2840A:
 
     def read_data(self):
         ut = time.time()
+        if self._fftmode:
+            self._soc.settimeout(max(self.capt_time*self.trace_nAve*10, self.timeout))
+        else:
+            self._soc.settimeout(max(self.sweep_time*self.trace_nAve*10, self.timeout))
         # measure data
         self._single()
         data = []
         data_bin = []
-        if self._fftmode :
+        if self._fftmode : 
             npoints = self.trace_points
             nread = math.ceil(npoints/5121.)
             if self._verbose > 1: print(f'MS2840A:read_data(): npoints={npoints}')
-            self._soc.settimeout(max(self.capt_time*self.trace_nAve*10, self.timeout))
             for i in range(nread):
                 start   = 5121*i
                 nremain = npoints - start
@@ -200,8 +222,7 @@ class MS2840A:
                 data     +=_rawdata
                 pass
             self._soc.settimeout(self.timeout)
-        else       :
-            self._soc.settimeout(max(self.sweep_time*self.trace_nAve*10, self.timeout))
+        else       : 
             _rawbin = self._wr('TRAC:DATA? TRAC1', decode=False)
             data_bin=[_rawbin]
             data    = self.decode_data(_rawbin)
@@ -269,24 +290,24 @@ class MS2840A:
         self.band_wid   = rbw # [Hz]
         if step is not None: self.freq_step = step # [Hz]
         if time is not None: self.ana_time = time # [sec]
-        else:
+        else: 
             print('MS2840A:fft_setting(): Warning! There is no argument of measurement time for one trace.')
             print('MS2840A:fft_setting(): Warning! --> analysis time is set to AUTO.')
-            self.is_ana_time_auto = True
+            self.is_ana_time_auto = True 
             pass
         if att is not None: self.att = att # [dB]
         self.freq_start = freq_start # [Hz]
         self.trace_nAve = nAve
 
         if self._verbose > 0: self.print_fft_setting()
-        self._wait()
+        self._opc()
         return 0
 
     def fft_run(self):
         if self._fftmode != True:
             print('MS2840A:fft_run(): Error! self._fftmode should be "True" but it is "{self._fftmode}".')
             return None
-        self._wait()
+        self._opc()
         if self._verbose > 1: self.print_fft_setting()
         data = self.read_data()
         return data
@@ -328,10 +349,10 @@ class MS2840A:
         self.video_mode = 'VID' # VIDeo mode
         self._w('CALC:MARK:MODE OFF') # marker mode: Off
         self._w('TRAC:ACT A') # activate trace A
-        if time is None :
+        if time is None : 
             self.is_sweep_auto = True
             self.sweep_automode = 'NORM' # sweep time mode: Normal
-        else :
+        else : 
             self.sweep_time = time
             pass
         if att is not None: self.att = att # [dB]
@@ -345,7 +366,7 @@ class MS2840A:
         self.det_mode = 'RMS' # NORM, POS, NEG, SAMP, RMS
         self.trace_points = (int)((self.freq_stop-self.freq_start)/self.band_wid) + 1
         self.trace_nAve = nAve
-        self._wait()
+        self._opc()
 
         if self._verbose > 1: self.print_sweep_setting()
         return 0
@@ -367,11 +388,11 @@ class MS2840A:
     ## Single measurement start
     def _single(self):
         self._w(f'INIT:MODE:SING')
-        self._wait() # wait for single measurement
+        self._opc() # wait for single measurement
     ## Start measurement immediately
     def _imm_start(self):
         self._w(f'INIT') # immediately start by the current mode (continuous or single)
-        self._wait() # wait for measurement
+        self._opc() # wait for measurement
 
 
     # Time
@@ -382,7 +403,7 @@ class MS2840A:
     @timeout.setter
     def timeout(self, timeout):
         self._timeout = timeout
-
+ 
     # Frequency
 
     @property
@@ -492,7 +513,7 @@ class MS2840A:
         return str(self._wr('FREQ:SYNT?')) # BPHase or NORMal or FAST
     @freqsynt_mode.setter
     def freqsynt_mode(self, mode:str):
-        if mode in ['NORM', 'BPH', 'FAST', 'NORMal', 'BPHase']:
+        if mode in ['NORM', 'BPH', 'FAST', 'NORMal', 'BPHase']: 
             self._w(f'FREQ:SYNT {mode}')
         else :
             print(f'MS2840A:freqsynt_mode(): Error! There is no frequency synthesis mode of "{mode}"!')
@@ -500,14 +521,14 @@ class MS2840A:
 
     # Level
 
-    ## Auto Attenuator
+    ## Auto Attenuator 
     @property
     def is_att_auto(self) -> bool:
         return bool(int(self._wr('POW:ATT:AUTO?')))
     @is_att_auto.setter
     def is_att_auto(self, onoff:bool):
         self._w(f'POW:ATT:AUTO {"1" if onoff else "0"}')
-    ## Attenuator
+    ## Attenuator 
     @property
     def att(self) :
         return float(self._wr('POW:ATT?')) # [dB]
@@ -543,7 +564,7 @@ class MS2840A:
     def capt_time(self, time_sec):
         self.is_capt_time_auto = False # AUTO capture time: OFF
         self._w(f'SWE:TIME {time_sec}S') # [sec]
-
+ 
     ## Continuous measurement or not
     @property
     def is_continu(self) -> bool:
@@ -577,7 +598,7 @@ class MS2840A:
         return str(self._wr('TRAC:MODE?')) # SPECtrum, PVTime, FVTime, PHASe, CCDF, SPGRam, None
     @trace_mode.setter
     def trace_mode(self, mode:str):
-        if mode in ['SPEC', 'PVT', 'FVT', 'CCDF', 'SPGR', 'SPECtrum', 'PVTime', 'FVTime', 'PHASe', 'CCDF', 'SPGRam']:
+        if mode in ['SPEC', 'PVT', 'FVT', 'CCDF', 'SPGR', 'SPECtrum', 'PVTime', 'FVTime', 'PHASe', 'CCDF', 'SPGRam']: 
             self._w(f'TRAC:mode {mode}')
         else :
             print(f'MS2840A:trace_mode(): Error! There is no trace mode of "{mode}"!')
@@ -621,7 +642,7 @@ class MS2840A:
         return self._wr(f'TRAC:STOR:MODE?')
     @trace_storemode.setter
     def trace_storemode(self, mode:str) :
-        self._w(f'TRAC:STOR:MODE OFF')
+        self._w(f'TRAC:STOR:MODE OFF') 
         if mode in ['OFF', 'MAXH', 'LAV', 'MINH']: # off, store max, store average, store min
             self._w(f'TRAC:STOR:MODE {mode}')
         else :
@@ -712,7 +733,7 @@ class MS2840A:
             print(f'MS2840A:binary_order(): Error! There is no binary order type of "{order}"!')
 
 
-def main(ms=None, mode='FFT',
+def main(ms=None, mode='FFT', 
         freq_start = 20e+9,  #Hz
         freq_span  = 2500e+3, #Hz
         rbw        = 300, #Hz
@@ -720,11 +741,12 @@ def main(ms=None, mode='FFT',
         att        = None, # dB, None=Auto
         nAve       = 10, # times (number of average for each data)
         nRun       = 10, # times (number of run or saved data)
-        outdir='~/data/ms2840a',
+        outdir='~/data/ms2840a', 
         nosetting=False, noplot=False, overwrite=False, shortconfig=False, nosubdir=False,
         ip_address = IP_ADDRESS,
         datBinary=False, saveDat=True, savePickle=True,
-        filename=None, filename_add_suffix=True, noRun=False, verbose=0):
+        filename=None, filename_add_suffix=True, noRun=False, verbose=0,
+        reconnect_interval=0):
 
     # Initialize connection
     print()
@@ -739,6 +761,7 @@ def main(ms=None, mode='FFT',
     # Initialize variables
     setting_time = 0
     run_time     = 0
+    measurement_error = None
 
     results = []
     if mode=='FFT' : # FFT mode by using Signal Analyzer
@@ -758,10 +781,17 @@ def main(ms=None, mode='FFT',
         for i in range(nRun):
             print(f'i={i+1}/{nRun} fft_run()')
             if noRun: continue
-            result = ms.fft_run()
+            try:
+                if reconnect_interval > 0 and i > 0 and i % reconnect_interval == 0:
+                    ms.reconnect()
+                    ms.fft_setting(freq_start=freq_start, freq_span=freq_span, rbw=rbw, time=meas_time, att=att, step=step, nAve=nAve)
+                result = ms.fft_run()
+            except Exception as error:
+                measurement_error = error
+                break
             if result is None :
-                print(f'FFT is failed! The return of fft_run is {result}.')
-                return 0
+                measurement_error = RuntimeError(f'FFT is failed! The return of fft_run is {result}.')
+                break
             results.append(result)
             pass
         stop_time = time.time()
@@ -786,10 +816,17 @@ def main(ms=None, mode='FFT',
         for i in range(nRun):
             print(f'i={i+1}/{nRun} sweep_run()')
             if noRun: continue
-            result = ms.sweep_run()
+            try:
+                if reconnect_interval > 0 and i > 0 and i % reconnect_interval == 0:
+                    ms.reconnect()
+                    ms.sweep_setting(freq_start=freq_start, freq_stop=freq_stop, rbw=rbw, time=meas_time, att=att, step=step, nAve=nAve)
+                result = ms.sweep_run()
+            except Exception as error:
+                measurement_error = error
+                break
             if result is None :
-                print(f'SWEEP is failed! The return of sweep_run is {result}.')
-                return 0
+                measurement_error = RuntimeError(f'SWEEP is failed! The return of sweep_run is {result}.')
+                break
             results.append(result)
             pass
         stop_time = time.time()
@@ -804,6 +841,8 @@ def main(ms=None, mode='FFT',
         pass
 
     nResult = len(results)
+    if nResult == 0 and measurement_error is not None:
+        raise measurement_error
 
     if not noplot:
         fig, ax = plt.subplots(2,1)
@@ -821,7 +860,7 @@ def main(ms=None, mode='FFT',
         fig.tight_layout()
         pass
 
-    # make output folder
+    # make output folder                                                     
     outdir = pathlib.Path(outdir).expanduser() # convert '~/' directory to full path name
     if (not os.path.exists(f'{outdir}')) and (not noRun):
         os.mkdir(f'{outdir}')
@@ -846,7 +885,7 @@ def main(ms=None, mode='FFT',
         ffig_dir = f'{outdir}'
         pass
 
-    # make new file
+    # make new file                                                           
     if filename is None or filename=='': filename = input("filename ? : ")
     if filename=='':
         print(f'Do NOT save the data!')
@@ -875,7 +914,7 @@ def main(ms=None, mode='FFT',
     fconfigpath = f'{fconfig_dir}/{filename}.csv'
     ffigpath = f'{ffig_dir}/{filename}.pdf'
 
-    if not noRun:
+    if not noRun: 
 
         # save figure
         if not noplot:
@@ -886,8 +925,8 @@ def main(ms=None, mode='FFT',
 
         # write data
         print(f'Save data to {fdatapaths}')
-        band_wid = ms.band_wid
-        trace_nAve = ms.trace_nAve
+        band_wid = rbw
+        trace_nAve = nAve
         if saveDat:
             for result, fdatapath in zip(results, fdatapaths) :
                 if datBinary:
@@ -918,6 +957,10 @@ def main(ms=None, mode='FFT',
                 f.close()
                 pass
             pass
+
+        if measurement_error is not None:
+            print(f'Measurement failed after {nResult} successful runs; saved partial data.')
+            raise measurement_error
 
         # write config
         print(f'Save data to {fconfigpath}')
@@ -961,16 +1004,16 @@ def main(ms=None, mode='FFT',
         f.write(f'# Elapsed time\n')
         f.write(f'time-setting, {setting_time}, sec\n')
         f.write(f'time-run, {run_time}, sec\n')
-        if not shortconfig:
+        if not shortconfig: 
             f.write(f'time/MHz, {run_time/(ms.freq_span*1.e-6)}, sec/MHz\n')
             eff_time = ms.ana_time*(float)(ms.trace_nAve*nResult) if fftmode else ms.sweep_time*(float)(ms.trace_nAve*nResult)
             dutyratio = eff_time/run_time;
             f.write(f'duty-ratio, {dutyratio}, \n')
             f.write(f'duty-ratio*span, {dutyratio*(ms.freq_span*1.e-6)}, MHz\n')
-            if dutyratio > 0.:
+            if dutyratio > 0.: 
                 f.write(f'span/duty-ratio, {(ms.freq_span*1.e-6)/dutyratio}, MHz\n')
                 pass
-
+     
             # Calculate data statistics
             mins  = [ np.min(result.amp) for result in results ] # [W]
             maxs  = [ np.max(result.amp) for result in results ] # [W]
@@ -1011,7 +1054,7 @@ def main(ms=None, mode='FFT',
                 pass
             pass
         pass # End of if not noRun
-
+    
     stop_time0 = time.time()
     setting_time0 = stop_time0 - start_time0
     print(f'===== End!: Elapsed time for main() = {setting_time0} sec =====')
@@ -1025,7 +1068,7 @@ if __name__ == '__main__':
     outdir     = '/data/ms2840a'
     filename   = None
     filename_add_suffix = False
-    ##
+    ## 
     mode = 'SWEEP' # SWEEP or FFT
     freq_start = 18e+9  #Hz
     freq_span  = 8500e+6 #Hz
@@ -1058,7 +1101,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     ret = main(
-        mode       = args.mode,
+        mode       = args.mode, 
         freq_start = args.freq_start,
         freq_span  = args.freq_span,
         rbw        = args.rbw,
@@ -1066,7 +1109,7 @@ if __name__ == '__main__':
         att        = args.att,
         nAve       = args.nAve,
         nRun       = args.nRun,
-        outdir     = args.outdir,
+        outdir     = args.outdir, 
         noplot     = args.noplot,
         overwrite  = args.overwrite,
         shortconfig= args.shortconfig,
@@ -1074,7 +1117,7 @@ if __name__ == '__main__':
         ip_address = args.ip_address,
         filename   = args.filename,
         filename_add_suffix = args.filename_add_suffix,
-        datBinary  = args.datBinary,
-        saveDat    = (not args.noSaveDat),
-        savePickle = (not args.noSavePickle),
+        datBinary  = args.datBinary, 
+        saveDat    = (not args.noSaveDat), 
+        savePickle = (not args.noSavePickle), 
         verbose    = args.verbose)
